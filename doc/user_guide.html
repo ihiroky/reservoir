@@ -1,0 +1,297 @@
+<h1 id="reservoir-ユーザーガイド">Reservoir ユーザーガイド</h1>
+<h2 id="概要">概要</h2>
+<p>Javaで記述されたライブラリで、ヒープの外（メモリ、ファイル）に値を格納する機能を持った、キー／バリュー形式のキャッシュやキューを提供する。</p>
+<h2 id="ヒープ外キャッシュ">ヒープ外キャッシュ</h2>
+<p><code>java.util.Map</code> のようにキー／バリュー形式でデータを保持するデータ構造で、バリューの部分をヒープ外に出力することができる。キーやバリューへの参照はヒープ上で管理するため、ヒープを使用しないわけではない。<code>net.ihiroky.reservoir.Builder</code> クラスを用いてキャッシュを組み立てる。キャッシュは <code>net.ihiroky.reservoir.Cache</code> によりアクセスする。同期処理方式はインデックスにより決まる。null値は扱えない。キャッシュは、大きく分けてインデックス／キャッシュアクセッサから成る。インデックスはキーの管理を行い、キャッシュアクセッサはバリューとなるデータへのアクセスを行う。インデックス／キャッシュアクセッサの種類に関しては、「<a href="#builder_spec">Builder 仕様</a>」を参照。</p>
+<p>（例）</p>
+<pre><code>Cache&lt;String, String&gt; cache = new Builder().name(&quot;sub&quot;)
+    .indexType(Builder.IndexType.LRU)
+    .cacheAccessorType(Builder.CacheAccessorType.BYTE_BUFFER)
+    .property(&quot;reservoir.ByteBufferCacheAccessor.direct&quot;, &quot;true&quot;)
+    .property(&quot;reservoir.ByteBufferCacheAccessor.size&quot;, &quot;8192&quot;)
+    .property(&quot;reservoir.ByteBufferCacheAccessor.blockSize&quot;, &quot;256&quot;)
+    .property(&quot;reservoir.ByteBufferCacheAccessor.partitions&quot;, &quot;8&quot;)
+    .property(&quot;reservoir.ByteBufferCacheAccessor.coder&quot;, &quot;net.ihiroky.reservoir.coder.SerializableCoder&quot;)
+    .createCache();
+cache.put(&quot;key&quot;, &quot;value&quot;);
+cache.put(&quot;fizz&quot;, &quot;buzz&quot;);
+System.out.println(&quot;key:&quot; + cache.get(&quot;key&quot;) + &quot;, fizz:&quot; + cache.get(&quot;fizz&quot;)); // says &#39;key:value, fizz:buzz&#39;
+cache.dispose();</code></pre>
+<h2 id="ヒープ外キュー">ヒープ外キュー</h2>
+<p>キューに入れるデータをヒープの外に出すことができる。データへの参照はヒープ上で管理するため、ヒープを使用しないわけではない。<code>java.util.Queue</code> インターフェースを実装しており、<code>java.util.concurrent.ConcurrentLinkedQueue</code> がベースとなっている。データの保存／読込ロジックは、ヒープ外キャッシュと同様に、キャッシュアクセッサを利用する。キャッシュアクセッサの種類に関しては、「<a href="#builder_spec">Builder 仕様</a>」を参照。</p>
+<p>（例）</p>
+<pre><code>BasicQueue&lt;byte[]&gt; queue = new Builder()
+    .indexType(Builder.IndexType.SIMPLE)
+    .cacheAccessorType(Builder.CacheAccessorType.BYTE_BUFFER)
+    .property(&quot;reservoir.ByteBufferCacheAccessor.direct&quot;, &quot;true&quot;)
+    .property(&quot;reservoir.ByteBufferCacheAccessor.size&quot;, &quot;8192&quot;)
+    .property(&quot;reservoir.ByteBufferCacheAccessor.blockSize&quot;, &quot;256&quot;)
+    .property(&quot;reservoir.ByteBufferCacheAccessor.coder&quot;, &quot;net.ihiroky.reservoir.coder.ByteArrayCoder&quot;)
+    .property(&quot;reservoir.ByteArrayCoder.compress.enabled&quot;, &quot;true&quot;)
+    .createQueue();
+
+byte[][] b = new byte[3][];
+for (int i=0; i&lt;b.length; i++) {
+    b[i] = new byte[512];
+    for (int j=0; j&lt;b[i].length; j++) {
+        b[i][j] = (byte)((i + &#39;0&#39;) % 10);
+    }
+}
+queue.offer(b[0]);
+queue.offer(b[1]);
+queue.offer(b[2]);
+try {
+    assertThat(queue.poll(), is(b[0]));
+    assertThat(queue.poll(), is(b[1]));
+    assertThat(queue.poll(), is(b[2]));
+    assertThat(queue.poll(), is(nullValue()));
+} finally {
+    queue.dispose();
+}</code></pre>
+<h2 id="jmx-サポート">JMX サポート</h2>
+<p>キャッシュ、キューともに Platform MBean Server に MBean を登録する。この MBean を jconsole や visualvm 等のツールから参照することでデータ管理データにアクセスできる。この MBean は以下のプロパティ、メソッドを公開している。</p>
+<h3 id="キャッシュ-mbean">キャッシュ MBean</h3>
+<h4 id="プロパティ">プロパティ</h4>
+<p>Name : <code>Builder#name()</code>または CompoundCacheのコンストラクタで指定した名前(name)。 Size : キャッシュしているキーの数。 CacheAccessorClassName : 使用しているキャッシュアクセッサオブジェクトのクラス名 IndexClassName : 使用しているインデックスオブジェクトのクラス名 StringKeyResolverClassName : 後述の referEntry(), removeEntry(), containsEntry() メソッドで使用する、文字列表現のキーを実際のキーに変換するオブジェトのクラス名</p>
+<h4 id="メソッド">メソッド</h4>
+<p>これらのメソッドは、<code>Cache#setStringKeyResolver()</code> によってキーの型に応じた <code>net.ihiroky.reservoir.StringResolver</code> が設定されていなければ機能しない。 referEntry(String key) : key で指定されるキーに対するバリューを文字列表現で返す。 removeEntry(String key) : key で指定されるキーとそのバリューを削除する。 boolean containsEntry(String key) : key で指定されるキーがキャッシュに含まれていれば true, 含まれていなければ false を返す。</p>
+<h3 id="キュー-mbean">キュー MBean</h3>
+<h4 id="プロパティ-1">プロパティ</h4>
+<p>Name : <code>Builder#name()</code>で指定した名前。<br />Size : エンキューされている要素数。</p>
+<h2 id="複合キャッシュ">複合キャッシュ</h2>
+<p><code>Builder</code> は、単一の保存領域（メモリ、ファイル）を使用する基本キャッシュを生成する。複数の基本キャッシュを用いて段階的なキャッシュを構成するためとして、複合キャッシュを設けている。 複合キャッシュは二つの基本キャッシュからなり、片方をメインキャッシュ、他方をサブキャッシュとしている。メインキャッシュは通常上限が設定されたキャッシュとし、メインキャッシュのサイズが上限に達した場合、インデックスが指定するキーとそのバリューをサブキャッシュに移動される。メインキャッシュには高速な動作を行うがサイズが限られるキャッシュ（例：ヒープにデータを置くサイズ上限の有るキャッシュ）を用い、サブキャッシュには低速だが上限の制限が緩い。メインキャッシュのサイズに上限が無い場合はサブキャッシュへの移動が起こらないため、複合キャッシュを構成する意味は無い。また、サブキャッシュにサイズ上限がある場合、この上限を超えたキー／バリューは消えてなくなる。複合キャッシュ生成時に指定する</p>
+<p>（例）</p>
+<pre><code>Cache&lt;String, String&gt; main = new Build().name(&quot;main&quot;).size(10)
+  ...
+  .createCache();
+Cache&lt;String, String&gt; sub = new Builder().name(&quot;sub&quot;)
+  ...
+  .createCache();
+Cache&lt;String, String&gt; cache = new CompoundCache(&quot;cache name&quot;, main, sub);
+cache.put(&quot;key&quot;, &quot;value&quot;);
+cache.put(&quot;fizz&quot;, &quot;buzz&quot;);
+System.out.println(&quot;key:&quot; + cache.get(&quot;key&quot;) + &quot;, fizz:&quot; + cache.get(&quot;fizz&quot;)); // says &#39;key:value, fizz:buzz&#39;
+cache.dispose();</code></pre>
+<h2 id="rest-サポート">REST サポート</h2>
+<p>XML/JSON over HTTP による、キャッシュ対する参照／更新／削除操作を行う機能をサポートしている。この機能を利用するためには、HTTPサーバを起動し、公開するキャッシュを登録する必要がある。このサーバは JDK 6 以上に含まれている <code>com.sun.http</code> を利用している。 ### サーバ HTTPサーバは <code>net.ihiroky.reservoir.rest.RestServer</code> として実装されている。このインスタンスに公開したいキャッシュとキャッシュの値を読み取るための <code>net.ihiroky.reservoir.coder.XMLCoder</code> と <code>net.ihiroky.reservoir.coder.JSONCoder</code> の実装を登録する。<code>XMLCoder</code>, <code>JSONCoder</code> はキー／バリューの型に応じた実装を用意する必要がある。そして、<code>RestSever#start()</code> を呼び出すとHTTPサーバが起動し、外部へ公開される。以下の例では <code>http://localhost:32767/reservoir/</code> がコンテキストルートになる。</p>
+<p>（例）</p>
+<pre><code>Cache&lt;String, String&gt; cache = new Builder().name(&quot;dic&quot;).createCache();
+restServer = new RestServer();
+restServer.addCache(integerCache, MLCoder.STRING_CODER, JSONCoder.STRING_CODER);
+restServer.start(&quot;localhost&quot;, 32767, &quot;/reservoir&quot;);</code></pre>
+<h3 id="api">API</h3>
+<ul>
+<li><p><strong>参照</strong></p>
+HTTP メソッド : GET<br />URL : コンテキストルート/{cache}/{key}
+<ul>
+<li>{cache} : キャッシュ名</li>
+<li>{key} : キー</li>
+</ul>
+<p>指定したキャッシュ名をもつキャッシュの指定したキーに対応するバリューを返す。リクエストヘッダ Accept が text/xml または application/xml の時は XML 形式で、application/json の場合は JSON 形式で応答を返す。また、パラメータとして regex=true を指定すると、key を正規表現として扱う。</p>
+<p>（例）</p>
+<pre><code>$ curl -X GET -H &#39;Accept: text/xml&#39; http://localhost:32767/reservoir/dic/hoge
+&lt;?xml version=&quot;1.0&quot; ?&gt;&lt;entries&gt;&lt;entry key=&quot;hoge&quot;&gt;fuga&lt;/entry&gt;&lt;/entries&gt;
+
+$ curl -X GET -H &#39;Accept: application/json&#39; http://localhost:32767/reservoir/dic/^h.*e$&amp;regex=true
+[{&quot;k&quot;:&quot;home&quot;,&quot;v&quot;:&quot;ie&quot;},{&quot;k&quot;:&quot;hoge&quot;,&quot;v&quot;:&quot;fuga&quot;}]</code></pre></li>
+<li><p><strong>更新</strong></p>
+HTTP メソッド : PUT<br />URL : コンテキストルート/{cache}
+<ul>
+<li>{cache} : キャッシュ名</li>
+<li>HTTP ボディに更新内容を記述</li>
+</ul>
+<p>指定したキャッシュ名をもつキャッシュに対して、同封される XML もしくは JSON の内容を更新する。同封するデータのフォーマットは、リクエストヘッダ Content-Type により指定する。XML を利用する場合は Content-Type として text/xml または application/xml を指定し、JSON を利用する場合は Content-Type として application/json を指定する。</p></li>
+</ul>
+<p>（例）</p>
+<pre><code>    $ curl -X PUT -H &#39;Content-Type: application/xml&#39; \  
+        -d &#39;&lt;?xml version=&quot;1.0&quot; ?&gt;&lt;entries&gt;&lt;entry key=&quot;hoe&quot;&gt;kuwa&lt;/entry&gt;&lt;entry key=&quot;horse&quot;&gt;uma&lt;/entry&gt;&lt;/entries&gt;&#39; \  
+        http://localhost:32767/reservoir/dic</code></pre>
+<ul>
+<li><p><strong>削除</strong></p>
+HTTP メソッド : DELETE URL : コンテキストルート/{cache}/{key}
+<ul>
+<li>{cache} : キャッシュ名</li>
+<li>{key} : キー</li>
+</ul>
+<p>指定したキャッシュ名をもつキャッシュの指定したキーに対応するバリューを削除し、その値を返す。リクエストヘッダ Accept が text/xml または application/xml の時は XML 形式で、application/json の場合は JSON 形式で応答を返す。また、パラメータとして regex=true を指定すると、key を正規表現として扱う。</p>
+<p>（例）</p>
+<pre><code>$ curl -X DELETE -H &#39;Accept: text/xml&#39; http://localhost:32767/reservoir/dic/hoge
+&lt;?xml version=&quot;1.0&quot; ?&gt;&lt;entries&gt;&lt;entry key=&quot;hoge&quot;&gt;fuga&lt;/entry&gt;&lt;/entries&gt;
+
+$ curl -X DELETE -H &#39;Accept: application/json&#39; http://localhost:32767/reservoir/dic/^h.*e$&amp;regex=true
+[{&quot;k&quot;:&quot;home&quot;,&quot;v&quot;:&quot;ie&quot;},{&quot;k&quot;:&quot;hoge&quot;,&quot;v&quot;:&quot;fuga&quot;}]</code></pre></li>
+<li><p>メタ情報</p>
+HTTP メソッド : HEAD URL : コンテキストルート/{cache}
+<ul>
+<li>{cache} : キャッシュ名</li>
+</ul>
+<p>指定したキャッシュ名をモツキャッシュのメタ情報をレスポンスヘッダに載せて返す。メタ情報の内容は以下のとおり。</p>
+<ul>
+<li>X-CACHE-NAME : キャッシュ名</li>
+<li>X-CACHE-SIZE : キャッシュが保持している要素数</li>
+<li>X-CACHE-INDEX : キャッシュが使用しているインデックスのクラス名</li>
+<li>X-CACHE-ACCESSOR : キャッシュが使用しているキャッシュアクセッサのクラス名</li>
+<li>X-CACHE-KEY-RESOLVER : MBeanのメソッド呼び出し時にキャッシュが使用する <code>StringResolver</code> のクラス名</li>
+<li>X-CACHE-XML-CODER : キャッシュが使用している <code>XMLCoder</code> のクラス名</li>
+<li>X-CACHE-JSON-CODER : キャッシュが使用している <code>JSONCoder</code> のクラス名</li>
+</ul></li>
+</ul>
+<h2 id="メモリアロケータ概要">メモリアロケータ概要</h2>
+<h3 id="ブロック">ブロック</h3>
+<p>キャッシュアクセッサには複数のパラメータを与えることができる。このパラメータは使用できる領域に影響を与える。キャッシュアクセッサによる保存領域の割り当てには、一定のバイトを1ブロックとしこれを最小割り当て単位とする固定長アロケータにより割り当てが行われる。基本的には一つのバイト列を、指定されたサイズを持つ固定長ブロックに分けて使用する。以下の模式図では、長さ11のブロックが3つ存在している様子を表している。</p>
+<pre><code>byte array : 012345678901234567890123456789012
+block      : | block A || block B || block C |</code></pre>
+<p>今、キャッシュアクセッサがある2つのオブジェクト (obj1, obj2) を一切データが保存されていないような上記バイト列に格納しようとする。格納するオブジェクトが <a href="#coder_spec">Coder</a> によりバイト列に変換され、そのサイズが10バイト、14バイトであったとき、格納イメージは以下の模式図のようになる。</p>
+<pre><code>byte array : 012345678901234567890123456789012
+block      : | block A || block B || block C |
+allocation : |  obj1  | |    obj2    |</code></pre>
+<p>obj1 はブロックサイズ（9バイト）に収まっており block A に格納される。obj2 の割り当ては、空き領域となっているブロックから行うため block A の空き領域をとばし、block B から行われる。obj2 はブロックサイズには収まらないため、次の空き領域である block C にも割り当てが行われる。obj2 により block C も割り当て済みとなり、空きブロックがなくなった（新しくデータを格納すことができない）状態となる。</p>
+<p>空き領域もブロック毎に管理されている。ある格納済みオブジェクトが削除されると、オブジェクトが割り当てられていたすべてのブロックが空き領域として扱われ、新しいオブジェクトの割り当てが有れば再利用される。</p>
+<h3 id="bytebuffer-による保存領域制限">ByteBuffer による保存領域制限</h3>
+<p>キャッシュアクセッサの保存領域として <code>java.nio.ByteBuffer</code> を直接的／間接的に使用する場合、<code>ByteBuffer</code> の制限から 2G バイト以上の大きさを持った一つの領域を作成することができない。2G バイト以上の領域を確保するときは 2G バイト未満の領域を複数束ねて使用する。キャッシュアクセッサとして <a href="#builder_spec_cacheaccessor">BYTE_BUFFER</a> を指定する場合は、保存領域のバイトサイズ、ブロックさイズに加え、2G バイト未満の領域（パーティション）をいくつ作るかも指定する。また、 <a href="#builder_spec_cacheaccessor">MEMORY_MAPPED_FILE</a> を指定する場合は、1ファイルあたりの上限バイトサイズは 2G バイト未満にする必要がある。</p>
+<a name="builder_spec"></a>
+<h2 id="builder-仕様">Builder 仕様</h2>
+<p><code>net.ihiroky.reservoir.Builder</code> クラスは、ヒープ外キャッシュ、ヒープ外キューを構築するために必要なパラメータを設定するためのインターフェースとなる。</p>
+<ul>
+<li><p>名前 <code>Builder#name()</code></p>
+<p>キャッシュに付与する名前を設定する。JMXにより公開されるMBeanのオブジェクト名や、REST APIによるキャッシュアクセスを行うときのキャッシュ識別名になる。指定しない場合はランダムな数列が割り当てられる。</p></li>
+<li><p>キャッシュサイズ上限 <code>Builder#maxCacheSize()</code></p>
+<p>インデックスが保持できるキーの上限数を設定する。指定しない場合は Integer.MAX_VALUE か Long.MAX_VALUE。SIMPLE インデックス以外で有効。</p></li>
+<li><p>キャッシュ初期サイズ <code>Builder#initialCacheSize()</code></p>
+<p>インデックスが初期状態で割り当てるテーブルのサイズを設定する。設定しない場合は 32。</p></li>
+<li><p>プロパティ</p>
+<p>初期化時に参照するプロパティを設定する。</p></li>
+<li><p>インデックス <code>Builder#indexType()</code></p>
+キャッシュのキーを管理する方法を決めるインデックスを指定する。いずれも列挙型 <code>Builder.IndexType</code> の値として定義されている。
+<ul>
+<li><p>SIMPLE</p>
+<p>サイズ制限を行わないインデックス。メモリが許す限りインデックスを利用できる。</p></li>
+<li><p>LRU</p>
+<p>キャッシュサイズが <code>Builder.maxCacheSize()</code> で設定した値に達したとき、バリューをもっとも参照／更新していないキーが削除される。</p></li>
+<li><p>FIFO</p>
+<p>キャッシュサイズが <code>Builder.maxCacheSize()</code> で設定した値に達したとき、バリューをもっとも更新していないキーが削除される。</p></li>
+<li><p>FRAGILE_LRU</p>
+<p>同期を取らない LRU.</p></li>
+<li><p>FRAGILE_FIFO</p>
+<p>同期を取らない FIFO.</p></li>
+<li><p>LFU</p>
+<p>未実装。</p></li>
+<li><p>AdaptiveReplacement</p>
+<p>未実装。</p></li>
+</ul></li>
+</ul>
+<a name="builder_spec_cacheaccessor"></a>
+<ul>
+<li><p>キャッシュアクセッサ <code>Builder#cacheAccessorType()</code></p>
+キャッシュのバリューをストレージ（メモリ、ファイル）に格納する方式を指定する。いずれも列挙型 <code>Builder.CacheAccessorType</code> の値として定義されている。HEAP, BYTE_BUFFER, MEMORY_MAPPED_FILE, FILE の4種類ある。
+<ul>
+<li><p>HEAP</p>
+<p>バリューの格納場所としてヒープを利用する。つまり、これを指定したときはヒープ外にデータを格納しない。</p></li>
+<li><p>BYTE_BUFFER</p>
+バリューの格納場所として <code>java.nio.ByteBuffer</code> を利用する。使用するプロパティは以下のとおり。全体のサイズを指定する方法と、<code>ByteBuffer</code> を一つずつ指定する方法がある。まずは、全体サイズを指定する方法について説明する。
+<ul>
+<li><p>reservoir.ByteBufferCacheAccessor.direct</p>
+ダイレクトバッファを利用する場合は true。デフォルトは false。つまり、trueを指定しないとヒープを利用したキャッシュとなる。</li>
+<li><p>reservoir.ByteBufferCacheAccessor.blockSize</p>
+<p>最小の管理単位となるバイトブロックのサイズ。単位は byte。デフォルトは 512。</p></li>
+<li><p>reservoir.ByteBufferCacheAccessor.partitions</p>
+割り当てるバッファの個数。同一バッファへのアクセスは同期が取られるが、割り当てられたそれぞれのバッファは並列にアクセスされうる。</li>
+<li><p>reservoir.ByteBufferCacheAccessor.size</p>
+<p>割り当てるバッファのサイズ。単位は byte。この値を blockSize で割った数、ただし、割り切れない場合は割った数 + 1 だけブロックが作成されるため、blockSizeで割り切れない値が指定されると、blockSize - (size % blockSize) だけ指定値よりも大きいバッファサイズを割り当てようとする。また、partitions で指定した値だけバッファの生成が行われ、その最小サイズは blockSize になるため、最小値は blockSize * partisions byte となる。デフォルトは 536870912 (512MB)。</p></li>
+<li><p>reservoir.ByteBufferCacheAccessor.coder</p>
+<p>バリューをバッファへ格納するときに用いるシリアライザと、バリューをバッファから取得するときに用いるデシリアライザを規定する <code>Coder</code> のクラス名を指定する。詳細は、「<a href="#coder_spec">Coder 仕様</a>」を参照。デフォルトは net.ihiroky.reservoir.coder.SerializableCoder。</p></li>
+</ul>
+<code>ByteBuffer</code> を一つずつ指定する方法は以下のとおり。partition パラメータは 数字.direct, 数字.capacity というサブパラメータがついており、同じ数字がついている (direct, capacity) により一つの <code>ByteBuffer</code> に対する設定を記述する。
+<ul>
+<li><p>reservoir.ByteBufferCacheAccessor.blockSize</p>
+<p>最小の管理単位となるバイトブロックのサイズ。単位は byte。デフォルトは 512。</p></li>
+<li><p>reservoir.ByteBufferCacheAccessor.partition.数字.direct</p>
+<p>数字で指定される <code>ByteBuffer</code> をダイレクトバッファとする場合は true。デフォルトは false。つまり、trueを指定しないとヒープを利用したキャッシュとなる。</p></li>
+<li><p>reservoir.ByteBufferCacheAccessor.partition.数字.capacity</p>
+<p>数字で指定される <code>ByteBuffer</code> の容量を指定する。上限は 2^31 - 1。</p></li>
+</ul></li>
+<li><p>MEMORY_MAPPED_FILE</p>
+バリューの格納場所として <code>java.nio.channel.FileChannel</code> から生成される <code>java.nio.MappedByteBuffer</code> を利用する。使用するプロパティは以下のとおり。 file パラメータは 数字.path, 数字.size, 数字.mode というサブパラメータがついており、同じ数字がついている (path, size, mode) により一つのファイルに対する設定を記述する。
+<ul>
+<li><p>reservoir.MemoryMappedFileCacheAccessor.file.数字.path</p>
+<code>MappedByteBuffer</code> の元となるファイルを示すパス。</li>
+<li><p>reservoir.MemoryMappedFileCacheAccessor.file.数字.size</p>
+path で示されたファイルのサイズ。単位は byte。ファイルサイズが size に満たない場合はsizeまで拡張され、ファイルサイズが size より大きい場合は、size まで縮小される。上限は 2^31 - 1。</li>
+<li><p>reservoir.MemoryMappedFileCacheAccessor.file.数字.mode</p>
+<p>path で示されたファイルをオープンする時のモード。READ_WRITE, SYNC（ディスクとメモリを完全に同期）, DSYNC（コンテンツのみディスクとメモリを同期）のいずれか。READ_WRITE がデフォルト。</p></li>
+<li><p>reservoir.MemoryMappedFileCacheAccessor.blockSize</p>
+最小の管理単位となるバイトブロックのサイズ。単位は byte。デフォルトは 1024。</li>
+<li><p>reservoir.MemoryMappedFileCacheAccessor.coder</p>
+バリューをバッファへ格納するときに用いるシリアライザと、バリューをバッファから取得するときに用いるデシリアライザを規定する <code>Coder</code> のクラス名を指定する。詳細は、「<a href="#coder_spec">Coder 仕様</a>」を参照。デフォルトは net.ihiroky.reservoir.coder.SerializableCoder。</li>
+</ul></li>
+<li><p>FILE</p>
+<p>バリューの格納場所として、ファイルを利用する。使用するプロパティは以下のとおり。MEMORY_MAPPED_FILE と同様に、file パラメータは 数字.path, 数字.size, 数字.mode というサブパラメータがついており、同じ数字がついている (path, size, mode) により一つのファイルに対する設定を記述する。</p>
+<ul>
+<li><p>reservoir.FileCacheAccessor.file.数字.path</p>
+ファイルを示すパス。</li>
+<li><p>reservoir.FileCacheAccessor.file.数字.size</p>
+path で示されたファイルのサイズ。単位は byte。ファイルサイズが size に満たない場合はsizeまで拡張され、ファイルサイズが　size より大きい場合は、size まで縮小される。</li>
+<li><p>reservoir.FileCacheAccessor.file.数字.mode</p>
+path で示されたファイルをオープンする時のモード。READ_WRITE, SYNC（ディスクとメモリを完全に同期）, DSYNC（コンテンツのみディスクとメモリを同期）のいずれか。READ_WRITE がデフォルト。</li>
+<li><p>reservoir.FileCacheAccessor.blockSize</p>
+最小の管理単位となるバイトブロックのサイズ。単位は byte。デフォルトは 1024。</li>
+<li><p>reservoir.FileCacheAccessor.coder</p>
+<p>バリューをバッファへ格納するときに用いるシリアライザと、バリューをバッファから取得するときに用いるデシリアライザを規定する <code>Coder</code> のクラス名を指定する。詳細は、「<a href="#coder_spec">Coder 仕様</a>」を参照。デフォルトは net.ihiroky.reservoir.coder.SerializableCoder。</p></li>
+</ul></li>
+</ul></li>
+</ul>
+<a name="coder_spec"></a>
+<h2 id="coder-仕様">Coder 仕様</h2>
+<p>キャッシュアクセッサのうちヒープにデータを載せるタイプ（<code>Builder#CacheAccessorType.HEAP</code>）以外は、ストレージにオブジェクト（データ）を格納する／ストレージからオブジェクト（データ）を取得するためにシリアライズ／デシリアライズを行う必要がある。これを取り扱うためのインターフェースが <code>net.ihiroky.reservoir.Coder</code> である。</p>
+<h3 id="既製-coder">既製 Coder</h3>
+<p>あらかじめ用意されている <code>Coder</code> 実装クラスは以下のとおり。また、それぞれに対し、<code>Builder#property()</code>により指定できるプロパティを示す。</p>
+<ul>
+<li><p><code>net.ihiroky.reservoir.coder.ByteArrayCoder</code></p>
+<p>バイト列をそのままストレージに格納／ストレージにから取得する。バイトの配列を扱うので、シリアライズ／デシリアライズ処理はない。</p>
+<ul>
+<li><p>reservoir.ByteArrayCoder.compress.enabled</p>
+圧縮の有効／無効設定。trueを指定すると <code>java.util.zip</code> による ZLIB 圧縮が有効になる。デフォルトは false。</li>
+<li><p>reservoir.ByteArrayCoder.compress.level</p>
+圧縮が有効な時、その圧縮レベルを指定する。1 〜 9 の値をとり、1は低圧縮率・高速で、昇順に高圧縮率・低速となる。デフォルトは 1。</li>
+<li><p>reservoir.ByteArrayCoder.initByteSize</p>
+圧縮を行うときに利用する一時バッファサイズ。指定値より大きいバッファが必要な時は自動的に拡張される。最小で16バイト、デフォルトは512バイト。</li>
+</ul></li>
+<li><p><code>net.ihiroky.reservoir.coder.SerializableCoder</code></p>
+<p><code>java.io.Serializable</code> を実装したクラスのオブジェクトをストレージに格納／ストレージから取得する。Javaのシリアライズ／デシリアライズ機構を利用する。</p>
+<ul>
+<li><p>reservoir.SerializableCoder.compress.enabled</p>
+圧縮の有効／無効設定。trueを指定すると <code>java.util.zip</code> による ZLIB 圧縮が有効になる。デフォルトは false。</li>
+<li><p>reservoir.SerializableCoder.compress.level</p>
+圧縮が有効な時、その圧縮レベルを指定する。1 〜 9 の値をとり、1は低圧縮率・高速で、昇順に高圧縮率・低速となる。デフォルトは 1。</li>
+</ul></li>
+<li><p><code>net.ihiroky.reservoir.coder.SimpleStringCoder</code></p>
+<p><code>String</code> をストレージに格納／ストレージから取得する。<code>char</code> を2バイトとみなして <code>String</code> を バイト列へ変換、またはその逆の変換を行うことでシリアライズ／デシリアライズを行う。</p>
+<ul>
+<li><p>reservoir.SimpleStringCoder.compress.enabled</p>
+圧縮の有効／無効設定。trueを指定すると <code>java.util.zip</code> による ZLIB 圧縮が有効になる。デフォルトは false。</li>
+<li><p>reservoir.SimpleStringCoder.compress.level</p>
+圧縮が有効な時、その圧縮レベルを指定する。1 〜 9 の値をとり、1は低圧縮率・高速で、昇順に高圧縮率・低速となる。デフォルトは 1。</li>
+</ul></li>
+<li><p><code>net.ihiroky.reservoir.coder.StringCoder</code></p>
+<p><code>String</code> をストレージに格納／ストレージから取得する。UTF-8 または指定した文字コードに基づきバイト列への変換、またはその逆の変換を行うことでシリアライズ／デシリアライズを行う。</p></li>
+</ul>
+<h3 id="カスタム-coder">カスタム Coder</h3>
+<p><code>Coder</code> インターフェースがネストしているインターフェース <code>Encoder</code>, <code>Decoder</code> の実装を用意し、これを用いて <code>Coder</code> クラスを実装・利用することでシリアライズ／デシリアライズ処理を追加することができる。</p>
+<h3 id="圧縮サポート">圧縮サポート</h3>
+<p><code>CompressionSupport</code> には圧縮・伸長ロジックを組み込む際に現れる汎用的な処理がまとめられている。 <code>CompressionSupport#loadProperties()</code> を <code>Coder#init()</code> から呼び出し状態（圧縮有効／無効、圧縮レベル設定）を初期化すると、<code>Coder#Encoder</code>, <code>Coder#Decoder</code> で以下のメソッドが使用できる。</p>
+<ul>
+<li><code>CompressionSupport#createOutputStreamIfEnabled()</code>（圧縮有効時に圧縮ストリームを生成）</li>
+<li><code>CompressionSupport#createInputStreamIfEnabled()</code>（圧縮有効時に伸長ストリームを生成）</li>
+<li><code>CompressionSupport#createEncoderInfEnabled()</code>（圧縮有効時に圧縮エンコーダを生成）</li>
+<li><code>CompressionSupport#createDecoderIfEnabled()</code>（圧縮有効時に伸長エンコーダを生成）</li>
+</ul>
+<p>また、圧縮有効／無効、圧縮レベル設定をサポートするプロパティ（'指定プレフィクス.compress.enabled', '指定プレフィクス.compress.level'）が設定として利用できるようになる。例として、例えば既製 Coder の <code>ByteArrayCoder</code> がある。</p>
+<h2 id="todo">TODO</h2>
+<ul>
+<li>LFU, Adaptive Replacement Key Priority インデックス実装<br /></li>
+<li>eviction (Time To Live, Time To Idle)<br /></li>
+<li>REST HTTPのエンジンに grizzly を使う</li>
+<li>REST pretty print</li>
+<li>REST で putIfAbsent, replace, remove<br /></li>
+<li>REST でキュー操作</li>
+</ul>

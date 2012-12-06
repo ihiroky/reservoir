@@ -1,0 +1,83 @@
+apply from: 'build.gradle'
+apply plugin: 'checkstyle'
+apply plugin: 'findbugs'
+apply plugin: 'pmd'
+
+defaultTasks 'clean', 'build'
+
+def buildNumber = System.getenv()['BUILD_NUMBER'];
+if (!buildNumber) {
+    buildNumber = new Date().format("yyyyMMdd-HHmmss")
+}
+
+configurations {
+    cobertura
+}
+
+dependencies {
+    checkstyle 'com.puppycrawl.tools:checkstyle:5.6'
+    findbugs 'com.google.code.findbugs:findbugs:+'
+    pmd 'pmd:pmd:4.3'
+    cobertura 'net.sourceforge.cobertura:cobertura:1.9.+'
+}
+
+checkstyleMain.configFile = file('checkstyle/main.xml')
+checkstyleTest.configFile = file('checkstyle/test.xml')
+[checkstyleMain, checkstyleTest, findbugsMain, findbugsTest, pmdMain, pmdTest]*.ignoreFailures = true
+
+// for non-maven pmd
+// http://forums.gradle.org/gradle/topics/new_built_in_pmd_plugin_fails_looking_for_etc_pmd_nicerhtml_xsl_file
+tasks.withType(Pmd).each {
+    it.reports {
+        xml.enabled true
+        html.enabled false
+    }
+}
+
+def coberturaReportDir = new File(reporting.baseDir, 'cobertura')
+def coberturaTmpDir = new File(buildDir, 'tmp/cobertura')
+def coberturaJUnitResultDir = new File(coberturaTmpDir, 'junit')
+def coberturaInstrumentDir = new File(coberturaTmpDir, 'instrument')
+def coberturaDataFile = new File(coberturaTmpDir, 'cobertura.ser')
+
+task cobertura(type: Test) {
+
+    exclude '**/*PerfTest.class'
+
+    jvmArgs "-Dnet.sourceforge.cobertura.datafile=${coberturaDataFile}"
+    testReportDir = coberturaJUnitResultDir
+    testResultsDir = coberturaJUnitResultDir
+
+    doFirst {
+        ant {
+            taskdef(resource: 'tasks.properties',
+                    classpath: configurations.cobertura.asPath)
+            'cobertura-instrument'(todir: coberturaInstrumentDir,
+                    datafile: coberturaDataFile) {
+                fileset(dir: sourceSets.main.output.classesDir)
+            }
+        }
+        classpath = files(coberturaInstrumentDir) + configurations.cobertura + classpath
+    }
+
+    doLast {
+        ant {
+            'cobertura-report'(destdir: coberturaReportDir,
+                    datafile: coberturaDataFile,
+                    format: 'xml') {
+                sourceSets.main.allJava.srcDirs.each { fileset(dir: it) }
+            }
+        }
+    }
+}
+
+check.dependsOn cobertura
+
+jar {
+    manifest {
+        attributes(
+            'Main-Class': rootPackage + '.Version',
+            'Implementation-Title': rootPackage,
+            'Implementation-Version': version + '.' + buildNumber)
+    }
+}
