@@ -276,11 +276,11 @@ public final class Reservoir {
         }
     }
 
-    public static class BlockingQueueBuilder extends Builder<QueueBuilder> {
+    public static class BlockingQueueBuilder extends Builder<BlockingQueueBuilder> {
 
         private int capacity = Integer.MAX_VALUE;
 
-        private Logger logger = LoggerFactory.getLogger(QueueBuilder.class);
+        private Logger logger = LoggerFactory.getLogger(BlockingQueueBuilder.class);
 
         BlockingQueueBuilder() {
         }
@@ -302,6 +302,7 @@ public final class Reservoir {
 
             logger.debug("[build] name : {}", name);
             logger.debug("[build] cacheAccessor : {}", cacheAccessor);
+            logger.debug("[build] capacity : {}", capacity);
             return new BasicBlockingQueue<E>(name, cacheAccessor, capacity);
         }
 
