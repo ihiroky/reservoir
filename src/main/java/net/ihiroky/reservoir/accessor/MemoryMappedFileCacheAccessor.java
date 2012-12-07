@@ -40,7 +40,7 @@ public class MemoryMappedFileCacheAccessor<K, V>
             }
             mappedByteBuffers.add(byteBuffer);
         }
-        BlockedByteBuffer blockedByteBuffer = new BlockedByteBuffer(byteBuffer, blockSize);
+        BlockedByteBuffer blockedByteBuffer = new BlockedByteBuffer(byteBuffer, blockSize, super.freeWaitMutex);
         blockedByteBuffer.setName(name.concat(file.getName()));
         return blockedByteBuffer;
     }

@@ -47,9 +47,9 @@ public class ByteBufferCacheAccessor<K, V> extends AbstractBlockedByteCacheAcces
         for (ByteBufferInfo byteBufferInfo : byteBufferInfos) {
             ByteBuffer byteBuffer = byteBufferInfo.direct
                     ? ByteBuffer.allocateDirect(byteBufferInfo.capacity) : ByteBuffer.allocate(byteBufferInfo.capacity);
-            bbbArray[count++] = new BlockedByteBuffer(byteBuffer, blockSize);
+            bbbArray[count++] = new BlockedByteBuffer(byteBuffer, blockSize, super.freeWaitMutex);
         }
-        prepare(name, bbbArray, blockSize, coder);
+        prepare(name, bbbArray, blockSize, coder, null);
     }
 
     public void prepare(String name, boolean direct, long size, int blockSize, int partitionsHint, Coder<V> coder) {
@@ -83,12 +83,12 @@ public class ByteBufferCacheAccessor<K, V> extends AbstractBlockedByteCacheAcces
             }
             ByteBuffer byteBuffer = direct ?
                     ByteBuffer.allocateDirect(bbbSize) : ByteBuffer.allocate(bbbSize);
-            bbbArray[i] = new BlockedByteBuffer(byteBuffer, blockSize);
+            bbbArray[i] = new BlockedByteBuffer(byteBuffer, blockSize, super.freeWaitMutex);
             bbbArray[i].setName(name + '-' + String.format("%5d", i));
             left -= bbbSize;
         }
 
-        prepare(name, bbbArray, blockSize, coder);
+        prepare(name, bbbArray, blockSize, coder, null); // TODO RejectedAllocationHandler setting.
     }
 
     @Override

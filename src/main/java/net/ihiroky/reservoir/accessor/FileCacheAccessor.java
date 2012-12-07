@@ -116,13 +116,13 @@ public class FileCacheAccessor<K, V> extends AbstractBlockedByteCacheAccessor<K,
         }
 
         this.randomAccessFiles = randomAccessFiles;
-        prepare(name, array, blockSize, coder);
+        prepare(name, array, blockSize, coder, null); // TODO RejectedAllocationHandler setting.
     }
 
     protected ByteBlockManager createInstance(
             String name, File file, RandomAccessFile randomAccessFile, int blockSize) throws IOException {
         BlockedFile blockedFile =
-                new BlockedFile(file.getAbsolutePath(), randomAccessFile, blockSize);
+                new BlockedFile(file.getAbsolutePath(), randomAccessFile, blockSize, super.freeWaitMutex);
         blockedFile.setName(name);
         return blockedFile;
     }

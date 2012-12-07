@@ -23,7 +23,7 @@ public class BlockedByteBufferTest {
     private ByteBlockManager bbb;
 
     protected ByteBlockManager createBlockedByteManager() throws Exception {
-        return new BlockedByteBuffer(ByteBuffer.allocate(64), 16);
+        return new BlockedByteBuffer(ByteBuffer.allocate(64), 16, this);
     }
 
     protected List<Number> asList(Number... numbers) {

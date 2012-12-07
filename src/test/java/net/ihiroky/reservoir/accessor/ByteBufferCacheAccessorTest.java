@@ -101,7 +101,7 @@ public class ByteBufferCacheAccessorTest {
         try {
             byteBufferCacheAccessor.update(0, new String(a), index);
         } catch (IllegalStateException ise) {
-            assertThat(ise.getMessage(), is("no free block."));
+            assertThat(ise.getMessage(), is("No free block is found. A ByteBlock allocation is aborted."));
         }
         assertThat(byteBufferCacheAccessor.getAllocatedBlocks(), is(0L));
     }

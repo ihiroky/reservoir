@@ -23,36 +23,69 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
  *
  * @author Hiroki Itoh
  */
-public abstract class AbstractBlockedByteCacheAccessor<K, V> implements CacheAccessor<K, V>, BlockedByteCacheAccessorMBean {
+public abstract class AbstractBlockedByteCacheAccessor<K, V>
+        implements CacheAccessor<K, V>, BlockedByteCacheAccessorMBean {
 
     private String name;
-    private ByteBlockManager[] byteBlockManagers;
+    private volatile ByteBlockManager[] byteBlockManagers;
     private int blockSize;
     private long wholeBlocks;
     private Coder.Encoder<V> encoder;
     private Coder.Decoder<V> decoder;
+
+    private RejectedAllocationHandler rejectedAllocationHandler = RejectedAllocationPolicy.ABORT;
+    protected final Object freeWaitMutex = new Object();
 
     private Logger logger = LoggerFactory.getLogger(AbstractBlockedByteCacheAccessor.class);
 
     private static final ByteBuffer EMPTY_BUFFER = ByteBuffer.allocate(0).asReadOnlyBuffer();
     private static final List<ByteBlock> EMPTY_LIST = Collections.emptyList();
 
-    private ByteBlock allocate(K key, int listPosition) {
-        ByteBlockManager[] bbbArray = byteBlockManagers;
-        int length = bbbArray.length;
-
-        int bbbIndex = positiveHash(key, listPosition) % length;
-        ByteBlock newBlock = bbbArray[bbbIndex].allocate();
-        if (newBlock != null) {
-            return newBlock;
-        }
-        for (int i = 1; i < length; i++) {
-            newBlock = bbbArray[(bbbIndex + i) % length].allocate();
-            if (newBlock != null) {
-                return newBlock;
+    public enum RejectedAllocationPolicy implements RejectedAllocationHandler{
+        WAIT_FOR_FREE_BLOCK {
+            @Override
+            public void handle(AbstractBlockedByteCacheAccessor accessor) throws InterruptedException {
+                accessor.freeWaitMutex.wait();
+            }
+        },
+        ABORT {
+            @Override
+            public void handle(AbstractBlockedByteCacheAccessor accessor) throws InterruptedException {
+                throw new IllegalStateException("No free block is found. A ByteBlock allocation is aborted.");
             }
         }
-        throw new IllegalStateException("no free block.");
+    }
+
+    private ByteBlock allocate(K key, int listPosition) throws InterruptedException {
+        for (;;) {
+            ByteBlockManager[] bbbArray = byteBlockManagers;
+            int length = bbbArray.length;
+            int bbbIndex = positiveHash(key, listPosition) % length;
+            synchronized (freeWaitMutex) {
+                ByteBlock newBlock = bbbArray[bbbIndex].allocate();
+                if (newBlock != null) {
+                    return newBlock;
+                }
+                for (int i = 1; i < length; i++) {
+                    newBlock = bbbArray[(bbbIndex + i) % length].allocate();
+                    if (newBlock != null) {
+                        return newBlock;
+                    }
+                }
+                rejectedAllocationHandler.handle(this);
+            }
+        }
+    }
+
+    void addByteBlockManager(ByteBlockManager byteBlockManager) {
+        synchronized (freeWaitMutex) {
+            int currentLength = this.byteBlockManagers.length;
+            ByteBlockManager[] newManagers = new ByteBlockManager[currentLength + 1];
+            System.arraycopy(this.byteBlockManagers, 0, newManagers, 0, currentLength);
+            newManagers[currentLength] = byteBlockManager;
+            this.byteBlockManagers = newManagers;
+            freeWaitMutex.notifyAll();
+        }
     }
 
     private static int positiveHash(Object key, int listPosition) {
@@ -122,14 +155,18 @@ public abstract class AbstractBlockedByteCacheAccessor<K, V> implements CacheAcc
             WriteLock writeLock = writeLock();
             writeLock.lock();
             try {
-                for (ByteBlock block : blockList) {
-                    block.free();
-                }
-                bytes = 0;
-                blockList.clear();
+                freeWithoutWriteLock();
             } finally {
                 writeLock.unlock();
             }
+        }
+
+        private void freeWithoutWriteLock() {
+            for (ByteBlock block : blockList) {
+                block.free();
+            }
+            bytes = 0;
+            blockList = EMPTY_LIST;
         }
 
         private ByteBuffer asByteBuffer() {
@@ -188,11 +225,11 @@ public abstract class AbstractBlockedByteCacheAccessor<K, V> implements CacheAcc
                 for (int i = blockList.size() - 1; i >= listPosition; i--) {
                     blockList.remove(i).free();
                 }
+            } catch (InterruptedException ie) {
+                freeWithoutWriteLock();
+                throw new RuntimeException("ByteBlock allocation is failed by InterruptedException.", ie);
             } catch (RuntimeException re) {
-                for (Iterator<ByteBlock> i = blockList.iterator(); i.hasNext(); ) {
-                    i.next().free();
-                    i.remove();
-                }
+                freeWithoutWriteLock();
                 throw re;
             } finally {
                 writeLock.unlock();
@@ -256,7 +293,9 @@ public abstract class AbstractBlockedByteCacheAccessor<K, V> implements CacheAcc
             }
         } catch (IllegalStateException ise) {
             Collection<Object> failedKeys = new ArrayList<Object>();
-            failedKeys.add(entry.getKey()); // entry is surely non null.
+            if (entry != null) {
+                failedKeys.add(entry.getKey());
+            }
             while (iterator.hasNext()) {
                 failedKeys.add(iterator.next().getKey());
             }
@@ -283,12 +322,16 @@ public abstract class AbstractBlockedByteCacheAccessor<K, V> implements CacheAcc
         }
     }
 
-    protected void prepare(String name, ByteBlockManager[] byteBlockManagers, int blockSize, Coder<V> coder) {
+    protected void prepare(String name, ByteBlockManager[] byteBlockManagers,
+                           int blockSize, Coder<V> coder, RejectedAllocationHandler handler) {
         this.name = name;
         this.byteBlockManagers = byteBlockManagers;
         this.blockSize = blockSize;
         this.decoder = coder.createDecoder();
         this.encoder = coder.createEncoder();
+        if (handler != null) {
+            this.rejectedAllocationHandler = handler;
+        }
 
         long wholeBlocks = 0;
         for (ByteBlockManager bbb : byteBlockManagers) {
@@ -301,11 +344,16 @@ public abstract class AbstractBlockedByteCacheAccessor<K, V> implements CacheAcc
         logger.info("[prepare] blockSize: {}", blockSize);
         logger.info("[prepare] coder: {}", coder);
         logger.info("[prepare] whileBlock: {}", wholeBlocks);
+        logger.info("[prepare] rejectedAllocationHandler: {}", rejectedAllocationHandler);
 
         MBeanSupport.registerMBean(this, name);
         for (ByteBlockManager bbb : byteBlockManagers) {
             MBeanSupport.registerMBean(bbb, bbb.getName());
         }
+    }
+
+    public int getBlockSize() {
+        return blockSize;
     }
 
     @Override
