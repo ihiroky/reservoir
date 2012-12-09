@@ -9,9 +9,11 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
@@ -159,5 +161,35 @@ public class ByteBufferCacheAccessorTest {
         assertThat(byteBufferCacheAccessor.getAllocatedBlocks(), is(3L));
         byteBufferCacheAccessor.remove(index.remove(Arrays.asList(0, 1, 2)));
         assertThat(byteBufferCacheAccessor.getAllocatedBlocks(), is(0L));
+    }
+
+    @Test
+    public void testWaitForFreeBlock() {
+        props.setProperty(
+                PropertiesSupport.key(byteBufferCacheAccessor.getClass(), "rejectedAllocationHandler"),
+                "WAIT_FOR_FREE_BLOCK");
+        byteBufferCacheAccessor.prepare(ByteBufferCacheAccessorTest.class + "#testWaitForFreeBlock", props);
+        final List<Ref<String>> refList = new ArrayList<Ref<String>>();
+        final int stopTime = 100;
+        for (int i = 0; i < 4; i++) {
+            Ref<String> ref = byteBufferCacheAccessor.create(i, "0123456789012345");
+            refList.add(ref);
+        }
+        Thread t = new Thread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    Thread.sleep(stopTime);
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+                byteBufferCacheAccessor.remove(0, refList.get(0));
+            }
+        });
+        long start = System.currentTimeMillis();
+        t.start();
+        byteBufferCacheAccessor.create(4, "0123456789012345"); // Wait until two free block is found.
+        long elapsed = System.currentTimeMillis() - start;
+        assertThat(elapsed >= stopTime, is(true));
     }
 }

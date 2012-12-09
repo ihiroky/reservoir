@@ -41,7 +41,7 @@ public abstract class AbstractBlockedByteCacheAccessor<K, V>
     private static final ByteBuffer EMPTY_BUFFER = ByteBuffer.allocate(0).asReadOnlyBuffer();
     private static final List<ByteBlock> EMPTY_LIST = Collections.emptyList();
 
-    public enum RejectedAllocationPolicy implements RejectedAllocationHandler{
+    public enum RejectedAllocationPolicy implements RejectedAllocationHandler {
         WAIT_FOR_FREE_BLOCK {
             @Override
             public void handle(AbstractBlockedByteCacheAccessor accessor) throws InterruptedException {
@@ -322,6 +322,24 @@ public abstract class AbstractBlockedByteCacheAccessor<K, V>
         }
     }
 
+    static RejectedAllocationHandler createRejectedAllocationHandler(String value) {
+        if (value == null) {
+            return RejectedAllocationPolicy.ABORT;
+        }
+        try {
+            return RejectedAllocationPolicy.valueOf(value);
+        } catch (IllegalArgumentException ignored) {
+            // The value is not a member of RejectedAllocationPolicy.
+            // Try to instantiate as a sub class name of RejectedAllocationHandler.
+        }
+        try {
+            Class<?> c = Class.forName(value);
+            return (RejectedAllocationHandler) c.newInstance();
+        } catch (Exception e) {
+            throw new RuntimeException("failed to create RejectedAllocationHandler : " + value, e);
+        }
+    }
+
     protected void prepare(String name, ByteBlockManager[] byteBlockManagers,
                            int blockSize, Coder<V> coder, RejectedAllocationHandler handler) {
         this.name = name;
@@ -343,7 +361,7 @@ public abstract class AbstractBlockedByteCacheAccessor<K, V>
         logger.info("[prepare] byteBlockManagers: {}", Arrays.toString(byteBlockManagers));
         logger.info("[prepare] blockSize: {}", blockSize);
         logger.info("[prepare] coder: {}", coder);
-        logger.info("[prepare] whileBlock: {}", wholeBlocks);
+        logger.info("[prepare] wholeBlock: {}", wholeBlocks);
         logger.info("[prepare] rejectedAllocationHandler: {}", rejectedAllocationHandler);
 
         MBeanSupport.registerMBean(this, name);

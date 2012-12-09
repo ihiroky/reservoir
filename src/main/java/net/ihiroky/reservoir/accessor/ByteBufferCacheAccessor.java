@@ -24,6 +24,8 @@ public class ByteBufferCacheAccessor<K, V> extends AbstractBlockedByteCacheAcces
     private static final String KEY_BLOCK_SIZE = "reservoir.ByteBufferCacheAccessor.blockSize";
     private static final String KEY_PARTITIONS = "reservoir.ByteBufferCacheAccessor.partitions";
     private static final String KEY_CODER = "reservoir.ByteBufferCacheAccessor.coder";
+    private static final String KEY_REJECTED_ALLOCATION_HANDLER =
+            "reservoir.ByteBufferCacheAccessor.rejectedAllocationHandler";
 
     private static final String KEY_PARTITION_PREFIX = "partition.";
     private static final String KEY_DIRECT_SUFFIX = ".direct";
@@ -34,7 +36,12 @@ public class ByteBufferCacheAccessor<K, V> extends AbstractBlockedByteCacheAcces
     private static final int DEFAULT_BLOCK_SIZE = 512;
     private static final int DEFAULT_PARTITIONS = 16;
 
-    public void prepare(String name, int blockSize, Coder<V> coder, Collection<ByteBufferInfo> byteBufferInfos) {
+    static int maxPartitionSize(int blockSize) {
+        return (Integer.MAX_VALUE / blockSize) * blockSize;
+    }
+
+    public void prepare(String name, int blockSize, Coder<V> coder, Collection<ByteBufferInfo> byteBufferInfos,
+                        RejectedAllocationHandler rejectedAllocationHandler) {
         if (name == null) {
             throw new NullPointerException("name must not be null.");
         }
@@ -49,66 +56,59 @@ public class ByteBufferCacheAccessor<K, V> extends AbstractBlockedByteCacheAcces
                     ? ByteBuffer.allocateDirect(byteBufferInfo.capacity) : ByteBuffer.allocate(byteBufferInfo.capacity);
             bbbArray[count++] = new BlockedByteBuffer(byteBuffer, blockSize, super.freeWaitMutex);
         }
-        prepare(name, bbbArray, blockSize, coder, null);
+        prepare(name, bbbArray, blockSize, coder, rejectedAllocationHandler);
     }
 
-    public void prepare(String name, boolean direct, long size, int blockSize, int partitionsHint, Coder<V> coder) {
+    public void prepare(final String name, final boolean direct, Coder<V> coder,
+                        BulkInfo bulkInfo, RejectedAllocationHandler rejectedAllocationHandler) {
         if (name == null) {
             throw new NullPointerException("name must not be null.");
         }
         if (coder == null) {
             throw new NullPointerException("coder must not be null.");
         }
-        if (size < blockSize
-                || blockSize < BlockedByteBuffer.MIN_BYTES_PER_BLOCK
-                || partitionsHint <= 0
-                || name.length() == 0) {
-            throw new IllegalArgumentException();
+        if (bulkInfo == null) {
+            throw new NullPointerException("bulkInfo must not be null.");
+        }
+        if (name.length() == 0) {
+            throw new IllegalArgumentException("name must not be empty.");
         }
 
-
-        final long partitionSizeHint = size / partitionsHint;
-        final int maxPartitionSize = Integer.MAX_VALUE - blockSize + 1; // 2^31 - blockSize
-        long left = size;
-        int partitionSize = (partitionSizeHint < maxPartitionSize) ? (int) partitionSizeHint : maxPartitionSize;
-        if (partitionSize < blockSize) {
-            partitionSize = blockSize;
-        }
-        int partitions = (int) (size / partitionSize + ((size % partitionSize != 0) ? 1 : 0));
-        BlockedByteBuffer[] bbbArray = new BlockedByteBuffer[partitions];
-        for (int i = 0; i < partitions; i++) {
-            int bbbSize = (left >= partitionSize) ? partitionSize : (int) left;
-            if (bbbSize < blockSize) {
-                bbbSize = blockSize;
+        BulkInfo.ByteBlockManagerAllocator allocator = new BulkInfo.ByteBlockManagerAllocator() {
+            @Override
+            public ByteBlockManager allocate(long size, int blockSize, int index) {
+                ByteBuffer byteBuffer = direct ?
+                        ByteBuffer.allocateDirect((int)size) : ByteBuffer.allocate((int)size);
+                BlockedByteBuffer bbb = new BlockedByteBuffer(
+                        byteBuffer, blockSize, ByteBufferCacheAccessor.super.freeWaitMutex);
+                bbb.setName(name + '-' + String.format("%05d", index));
+                return bbb;
             }
-            ByteBuffer byteBuffer = direct ?
-                    ByteBuffer.allocateDirect(bbbSize) : ByteBuffer.allocate(bbbSize);
-            bbbArray[i] = new BlockedByteBuffer(byteBuffer, blockSize, super.freeWaitMutex);
-            bbbArray[i].setName(name + '-' + String.format("%5d", i));
-            left -= bbbSize;
-        }
-
-        prepare(name, bbbArray, blockSize, coder, null); // TODO RejectedAllocationHandler setting.
+        };
+        int maxPartitionSize = maxPartitionSize(bulkInfo.blockSize);
+        ByteBlockManager[] managers = bulkInfo.allocate(allocator, maxPartitionSize);
+        prepare(name, managers, bulkInfo.blockSize, coder, rejectedAllocationHandler);
     }
 
     @Override
     public void prepare(String name, Properties props) {
 
         int blockSize = PropertiesSupport.intValue(props, KEY_BLOCK_SIZE, DEFAULT_BLOCK_SIZE);
-        @SuppressWarnings("unchecked")
-        Coder<V> coder = (Coder<V>) PropertiesSupport.newInstance(props, KEY_CODER, SerializableCoder.class);
+        final Coder<V> coder = PropertiesSupport.newInstance(props, KEY_CODER, SerializableCoder.class);
         coder.init(props);
+        final String rah = props.getProperty(KEY_REJECTED_ALLOCATION_HANDLER);
 
         Collection<ByteBufferInfo> byteBufferInfos = parseByteBufferInfo(props);
         if (byteBufferInfos.size() > 0) {
-            prepare(name, blockSize, coder, byteBufferInfos);
+            prepare(name, blockSize, coder, byteBufferInfos, createRejectedAllocationHandler(rah));
             return;
         }
 
         boolean direct = PropertiesSupport.booleanValue(props, KEY_DIRECT, DEFAULT_DIRECT);
         long size = PropertiesSupport.longValue(props, KEY_SIZE, DEFAULT_SIZE);
         int partitions = PropertiesSupport.intValue(props, KEY_PARTITIONS, DEFAULT_PARTITIONS);
-        prepare(name, direct, size, blockSize, partitions, coder);
+        BulkInfo bulkInfo = new BulkInfo(size, blockSize, partitions);
+        prepare(name, direct, coder, bulkInfo, createRejectedAllocationHandler(rah));
     }
 
     private Collection<ByteBufferInfo> parseByteBufferInfo(Properties props) {

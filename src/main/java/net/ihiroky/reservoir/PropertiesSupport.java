@@ -83,17 +83,18 @@ public final class PropertiesSupport {
         return defaultValue;
     }
 
-    public static Object newInstance(Properties props, String key, Class<?> defaultClass) {
+    @SuppressWarnings("unchecked")
+    public static <T> T newInstance(Properties props, String key, Class<?> defaultClass) {
         String value = props.getProperty(key);
         if (value != null) {
             try {
-                return Class.forName(value).newInstance();
+                return (T) Class.forName(value).newInstance();
             } catch (Throwable t) {
                 logger.info("[newInstance] failed to instantiate by property(" + key + "," + value + ")", t);
             }
         }
         try {
-            return (defaultClass != null) ? defaultClass.newInstance() : null;
+            return (T) ((defaultClass != null) ? defaultClass.newInstance() : null);
         } catch (Throwable t) {
             logger.info("[newInstance] failed to instantiate default class: " + defaultClass, t);
         }

@@ -24,11 +24,17 @@ public class MemoryMappedFileCacheAccessor<K, V>
     private Logger logger = LoggerFactory.getLogger(FileCacheAccessor.class);
 
     @Override
+    protected long getMaxPartitionSize(int blockSize) {
+        return ByteBufferCacheAccessor.maxPartitionSize(blockSize);
+    }
+
+    @Override
     protected ByteBlockManager createInstance(
             String name, File file, RandomAccessFile randomAccessFile, int blockSize) throws IOException {
         long size = randomAccessFile.length();
-        if (size > Integer.MAX_VALUE) {
-            size = Integer.MAX_VALUE;
+        final int maxPartitionSize = ByteBufferCacheAccessor.maxPartitionSize(blockSize);
+        if (size > maxPartitionSize) {
+            size = maxPartitionSize;
             randomAccessFile.setLength(size);
             logger.warn("[createInstance] truncate {} to {} because of the MemoryByteBuffer limitation.",
                     file, size);

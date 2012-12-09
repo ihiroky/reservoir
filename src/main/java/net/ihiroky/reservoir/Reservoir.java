@@ -1,5 +1,7 @@
 package net.ihiroky.reservoir;
 
+import net.ihiroky.reservoir.accessor.AbstractBlockedByteCacheAccessor;
+import net.ihiroky.reservoir.accessor.BulkInfo;
 import net.ihiroky.reservoir.accessor.ByteBufferCacheAccessor;
 import net.ihiroky.reservoir.accessor.FileCacheAccessor;
 import net.ihiroky.reservoir.accessor.HeapCacheAccessor;
@@ -127,7 +129,8 @@ public final class Reservoir {
         String name = randomName();
         Index<K, Ref<V>> index = IndexType.SIMPLE.create(16, -1);
         ByteBufferCacheAccessor<K, V> cacheAccessor = new ByteBufferCacheAccessor<K, V>();
-        cacheAccessor.prepare(name, true, size, blockSize, partitions, coder);
+        cacheAccessor.prepare(name, true, coder, new BulkInfo(size, blockSize, partitions),
+                AbstractBlockedByteCacheAccessor.RejectedAllocationPolicy.ABORT);
         return new BasicCache<K, V>(name, index, cacheAccessor);
     }
 
@@ -150,7 +153,8 @@ public final class Reservoir {
 
         Index<K, Ref<V>> index = IndexType.SIMPLE.create(16, -1);
         ByteBufferCacheAccessor<K, V> cacheAccessor = new ByteBufferCacheAccessor<K, V>();
-        cacheAccessor.prepare(name, true, size, blockSize, partitions, coder);
+        cacheAccessor.prepare(name, true, coder, new BulkInfo(size, blockSize, partitions),
+                AbstractBlockedByteCacheAccessor.RejectedAllocationPolicy.ABORT);
         return new BasicCache<K, V>(name, index, cacheAccessor);
     }
 
@@ -255,6 +259,7 @@ public final class Reservoir {
             logger.debug("[build] initialCacheSize : {}", initialCacheSize);
             logger.debug("[build] index : {}", index);
             logger.debug("[build] cacheAccessor : {}", cacheAccessor);
+            logger.debug("[build] properties : {}", props);
             return new BasicCache<K, V>(name, index, cacheAccessor);
         }
     }
@@ -272,6 +277,7 @@ public final class Reservoir {
 
             logger.debug("[build] name : {}", name);
             logger.debug("[build] cacheAccessor : {}", cacheAccessor);
+            logger.debug("[build] properties : {}", props);
             return new BasicQueue<E>(name, cacheAccessor);
         }
     }
@@ -301,8 +307,9 @@ public final class Reservoir {
             cacheAccessor.prepare(name, props);
 
             logger.debug("[build] name : {}", name);
-            logger.debug("[build] cacheAccessor : {}", cacheAccessor);
             logger.debug("[build] capacity : {}", capacity);
+            logger.debug("[build] cacheAccessor : {}", cacheAccessor);
+            logger.debug("[build] properties : {}", props);
             return new BasicBlockingQueue<E>(name, cacheAccessor, capacity);
         }
 

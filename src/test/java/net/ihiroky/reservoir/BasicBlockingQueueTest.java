@@ -1,5 +1,7 @@
 package net.ihiroky.reservoir;
 
+import net.ihiroky.reservoir.accessor.AbstractBlockedByteCacheAccessor;
+import net.ihiroky.reservoir.accessor.BulkInfo;
 import net.ihiroky.reservoir.accessor.ByteBufferCacheAccessor;
 import net.ihiroky.reservoir.coder.ByteArrayCoder;
 import org.junit.After;
@@ -33,9 +35,10 @@ public class BasicBlockingQueueTest {
     private byte[] b2;
 
     @Before
-    public void before() {
+    public void before() throws Exception{
         cacheAccessor = new ByteBufferCacheAccessor<Object, byte[]>();
-        cacheAccessor.prepare("BasicBlockingQueueTest", false, 48, 8, 1, new ByteArrayCoder());
+        cacheAccessor.prepare("BasicBlockingQueueTest", false, new ByteArrayCoder(), new BulkInfo(48, 8, 1),
+                AbstractBlockedByteCacheAccessor.RejectedAllocationPolicy.WAIT_FOR_FREE_BLOCK);
         queue = new BasicBlockingQueue<byte[]>("BasicBlockingQueueTest", cacheAccessor);
         disposeSet = new HashSet<BasicBlockingQueue<?>>(Arrays.<BasicBlockingQueue<?>>asList(queue));
         b0 = new byte[]{1, 2, 3, 4, 5};

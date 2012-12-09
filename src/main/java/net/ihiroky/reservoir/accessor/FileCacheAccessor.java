@@ -27,11 +27,20 @@ public class FileCacheAccessor<K, V> extends AbstractBlockedByteCacheAccessor<K,
 
     private static final String KEY_PREFIX = "reservoir.";
     private static final String KEY_BLOCK_SIZE_SUFFIX = ".blockSize";
+    private static final String KEY_REJECTED_ALLOCATION_HANDLER_SUFFIX = ".rejectedAllocationHandler";
+
     private static final String KEY_CODER_SUFFIX = ".coder";
     private static final String KEY_FILE_PREFIX = ".file.";
     private static final String KEY_PATH_SUFFIX = ".path";
     private static final String KEY_SIZE_SUFFIX = ".size";
     private static final String KEY_MODE_SUFFIX = ".mode";
+
+    private static final String KEY_PARTITIONS_SUFFIX = ".partitions";
+    private static final String KEY_DIRECTORY_SUFFIX = ".directory";
+
+    private static final int DEFAULT_SIZE = 512 * 1024 * 1024;
+    private static final int DEFAULT_BLOCK_SIZE = 512;
+    private static final int DEFAULT_PARTITIONS = 4;
 
     private volatile Collection<RandomAccessFile> randomAccessFiles = Collections.emptyList();
 
@@ -41,13 +50,40 @@ public class FileCacheAccessor<K, V> extends AbstractBlockedByteCacheAccessor<K,
         return className.substring(lastDotIndex + 1);
     }
 
+    static String key(String className, String suffix) {
+        return KEY_PREFIX + className + suffix;
+    }
+
     @Override
     public void prepare(String name, Properties props) {
         final String cn = getClassName();
-        int blockSize = PropertiesSupport.intValue(
-                props, KEY_PREFIX + cn + KEY_BLOCK_SIZE_SUFFIX, 1024);
-        Map<Integer, FileInfo> fileUnitMap = new TreeMap<Integer, FileInfo>();
-        String fileKeyPrefix = KEY_PREFIX + cn + KEY_FILE_PREFIX;
+        int blockSize = PropertiesSupport.intValue(props, key(cn, KEY_BLOCK_SIZE_SUFFIX), DEFAULT_BLOCK_SIZE);
+        Coder<V> coder = PropertiesSupport.newInstance(props, key(cn, KEY_CODER_SUFFIX), SerializableCoder.class);
+        String rah = props.getProperty(key(cn, KEY_REJECTED_ALLOCATION_HANDLER_SUFFIX));
+        Collection<FileInfo> fileInfos = parseFileInfo(props, cn);
+        if (fileInfos.size() > 0) {
+            try {
+                prepare(name, blockSize, coder, fileInfos, createRejectedAllocationHandler(rah));
+                return;
+            } catch (IOException ioe) {
+                throw new RuntimeException("failed to prepare " + cn + " " + fileInfos, ioe);
+            }
+        }
+
+        long totalSize = PropertiesSupport.longValue(props, key(cn, KEY_SIZE_SUFFIX), DEFAULT_SIZE);
+        int partitions = PropertiesSupport.intValue(props, key(cn, KEY_PARTITIONS_SUFFIX), DEFAULT_PARTITIONS);
+        String directory = props.getProperty(key(cn, KEY_DIRECTORY_SUFFIX));
+        BulkInfo bulkInfo = new BulkInfo(totalSize, blockSize, partitions);
+        try {
+            prepare(name, coder, directory, FileInfo.Mode.READ_WRITE, bulkInfo, createRejectedAllocationHandler(rah));
+        } catch (IOException ioe) {
+            throw new RuntimeException("failed to prepare " + cn + " " + bulkInfo, ioe);
+        }
+    }
+
+    private Collection<FileInfo> parseFileInfo(Properties props, String className) {
+        Map<Integer, FileInfo> fileInfoMap = new TreeMap<Integer, FileInfo>();
+        String fileKeyPrefix = KEY_PREFIX + className + KEY_FILE_PREFIX;
         for (String key : props.stringPropertyNames()) {
             if (!key.startsWith(fileKeyPrefix)) {
                 continue;
@@ -59,10 +95,10 @@ public class FileCacheAccessor<K, V> extends AbstractBlockedByteCacheAccessor<K,
             String value = props.getProperty(key);
             try {
                 int id = Integer.parseInt(key.substring(fileKeyPrefix.length(), idEndIndex));
-                FileInfo fileInfo = fileUnitMap.get(id);
+                FileInfo fileInfo = fileInfoMap.get(id);
                 if (fileInfo == null) {
                     fileInfo = new FileInfo();
-                    fileUnitMap.put(id, fileInfo);
+                    fileInfoMap.put(id, fileInfo);
                 }
                 if (key.endsWith(KEY_PATH_SUFFIX)) {
                     fileInfo.setPath(value);
@@ -75,19 +111,44 @@ public class FileCacheAccessor<K, V> extends AbstractBlockedByteCacheAccessor<K,
                 throw new IllegalArgumentException("failed to parse property. key:" + key + ", value:" + value, nfe);
             }
         }
-        @SuppressWarnings("unchecked")
-        Coder<V> coder = (Coder<V>) PropertiesSupport.newInstance(
-                props, KEY_PREFIX + cn + KEY_CODER_SUFFIX, SerializableCoder.class);
-
-        try {
-            prepare(name, blockSize, coder, fileUnitMap.values());
-        } catch (IOException ioe) {
-            throw new RuntimeException(ioe);
+        return fileInfoMap.values();
+    }
+    public void prepare(final String name, Coder<V> coder,
+                        final String directory, final FileInfo.Mode mode,
+                        BulkInfo bulkInfo, RejectedAllocationHandler rejectedAllocationHandler)
+            throws IOException {
+        if (name == null) {
+            throw new NullPointerException("name must not be null.");
         }
+        if (coder == null) {
+            throw new NullPointerException("coder must not be null.");
+        }
+        if (bulkInfo == null) {
+            throw new NullPointerException("bulkInfo must not be null.");
+        }
+
+        BulkInfo.ByteBlockManagerAllocator allocator = new BulkInfo.ByteBlockManagerAllocator() {
+
+            @Override
+            public ByteBlockManager allocate(long size, int blockSize, int index) {
+                File file = new File(directory, name + '-' + String.format("%05d", index));
+                try {
+                    RandomAccessFile randomAccessFile = new RandomAccessFile(file, mode.value);
+                    randomAccessFiles.add(randomAccessFile);
+                    randomAccessFile.setLength(size);
+                    return createInstance(file.getName(), file, randomAccessFile, blockSize);
+                } catch (IOException ioe) {
+                    throw new RuntimeException("failed to allocate ByteBlockManager : " + file, ioe);
+                }
+            }
+        };
+        ByteBlockManager[] managers= bulkInfo.allocate(allocator, getMaxPartitionSize(bulkInfo.blockSize));
+        prepare(name, managers, bulkInfo.blockSize, coder, rejectedAllocationHandler);
     }
 
     public void prepare(String name, int blockSize, Coder<V> coder,
-                        Collection<FileInfo> fileInfos) throws IOException {
+                        Collection<FileInfo> fileInfos, RejectedAllocationHandler rejectedAllocationHandler)
+            throws IOException {
 
         if (name == null || coder == null || fileInfos == null) {
             throw new NullPointerException();
@@ -111,12 +172,16 @@ public class FileCacheAccessor<K, V> extends AbstractBlockedByteCacheAccessor<K,
             randomAccessFiles.add(randomAccessFile);
             randomAccessFile.setLength(fileInfo.size);
             ByteBlockManager byteBlockManager = createInstance(
-                    name + '-' + String.format("%5d", count), fileInfo.file, randomAccessFile, blockSize);
+                    name + '-' + String.format("%05d", count), fileInfo.file, randomAccessFile, blockSize);
             array[count++] = byteBlockManager;
         }
 
         this.randomAccessFiles = randomAccessFiles;
-        prepare(name, array, blockSize, coder, null); // TODO RejectedAllocationHandler setting.
+        prepare(name, array, blockSize, coder, rejectedAllocationHandler);
+    }
+
+    protected long getMaxPartitionSize(int blockSize) {
+        return Long.MAX_VALUE;
     }
 
     protected ByteBlockManager createInstance(
