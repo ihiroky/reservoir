@@ -125,7 +125,7 @@ public class ReservoirTest {
                 .build(ReservoirTest.class.getName() + "#testByteBufferCacheAssessorBuilder");
         disposeCacheAccessorList.add(ca);
 
-        ByteBufferCacheAccessor bbca = (ByteBufferCacheAccessor) ca;
+        ByteBufferCacheAccessor<Object, byte[]> bbca = (ByteBufferCacheAccessor<Object, byte[]>) ca;
 
         assertThat(bbca.getWholeBlocks(), is(DEFAULT_MAX_DIRECT_MEMORY_SIZE / 256L / usagePercent));
         assertThat(bbca.getPartitions(), is(partitionsHint));
@@ -136,13 +136,26 @@ public class ReservoirTest {
     }
 
     @Test
+    public void testByteBufferCacheAccessorBuilderWithByteBufferInfo() {
+        CacheAccessor<Object, byte[]> ca = Reservoir.newByteBufferCacheAccessorBuilder()
+                .blockSize(128).byteBufferInfo(true, 256).byteBufferInfo(true, 256)
+                .build(ReservoirTest.class.getName() + "#testByteBufferCacheAccessorBuilderWithByteBufferInfo");
+        disposeCacheAccessorList.add(ca);
+
+        ByteBufferCacheAccessor<Object, byte[]> bbca = (ByteBufferCacheAccessor<Object, byte[]>)ca;
+        assertThat(bbca.getWholeBlocks(), is(4L));
+        assertThat(bbca.getBlockSize(), is(128));
+        assertThat(bbca.getPartitions(), is(2));
+    }
+
+    @Test
     public void testByteBufferCacheAccessorBuilderDefault() {
 
         CacheAccessor<Object, byte[]> ca = Reservoir.newByteBufferCacheAccessorBuilder()
                 .build(ReservoirTest.class.getName() + "#testByteBufferCacheAssessorBuilderDefault");
         disposeCacheAccessorList.add(ca);
 
-        ByteBufferCacheAccessor bbca = (ByteBufferCacheAccessor) ca;
+        ByteBufferCacheAccessor<Object, byte[]> bbca = (ByteBufferCacheAccessor<Object, byte[]>) ca;
         assertThat(bbca.getWholeBlocks(), is(DEFAULT_MAX_DIRECT_MEMORY_SIZE / 512L / 10 * 9 + 1)); // 1 : fraction
         assertThat(bbca.getPartitions(), is(1));
         assertThat(bbca.getBlockSize(), is(512));
@@ -191,6 +204,22 @@ public class ReservoirTest {
         } finally {
             deleteRecursively(directory);
         }
+    }
+
+    @Test
+    public void testFileCacheAccessorBuilderWithFileInfo() throws IOException {
+        File file0 = folder.newFile();
+        File file1 = folder.newFile();
+        CacheAccessor<Object, byte[]> ca = Reservoir.newFileCacheAccessorBuilder().blockSize(128)
+                .fileInfo(file0.getPath(), 256, FileInfo.Mode.READ_WRITE)
+                .fileInfo(file1.getPath(), 256, FileInfo.Mode.READ_WRITE)
+                .build(ReservoirTest.class.getName() + "#testByteBufferCacheAccessorBuilderWithFileInfo");
+        disposeCacheAccessorList.add(ca);
+
+        FileCacheAccessor<Object, byte[]> fca = (FileCacheAccessor<Object, byte[]>)ca;
+        assertThat(fca.getWholeBlocks(), is(4L));
+        assertThat(fca.getBlockSize(), is(128));
+        assertThat(fca.getPartitions(), is(2));
     }
 
     @Test
