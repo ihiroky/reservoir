@@ -77,7 +77,7 @@ public class ByteBufferCacheAccessorTest {
                 .set(ByteBufferCacheAccessor.class, "partition.3.capacity", "16")
                 .set(ByteBufferCacheAccessor.class, "partition.4.direct", "true")
                 .set(ByteBufferCacheAccessor.class, "partition.4.capacity", "16")
-                .properties();
+                .build();
 
         ByteBufferCacheAccessor<Integer, String> instance = new ByteBufferCacheAccessor<Integer, String>();
         try {
@@ -97,7 +97,7 @@ public class ByteBufferCacheAccessorTest {
                 .set(ByteBufferCacheAccessor.class, "usagePercent", "10")
                 .set(ByteBufferCacheAccessor.class, "blockSize", "256")
                 .set(ByteBufferCacheAccessor.class, "partitions", "1")
-                .properties();
+                .build();
 
         ByteBufferCacheAccessor<Integer, String> instance = new ByteBufferCacheAccessor<Integer, String>();
         disposeSet.add(instance);

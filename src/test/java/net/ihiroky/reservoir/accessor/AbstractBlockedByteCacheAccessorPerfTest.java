@@ -79,7 +79,7 @@ public class AbstractBlockedByteCacheAccessorPerfTest {
                 .set("reservoir.ByteBufferCacheAccessor.blockSize", String.valueOf(blockSize))
                 .set("reservoir.ByteBufferCacheAccessor.partitions", String.valueOf(partitions))
                 .set("reservoir.ByteBufferCacheAccessor.coder", "net.ihiroky.reservoir.coder.SimpleStringCoder")
-                .set("times", "500000").properties();
+                .set("times", "500000").build();
 
         testUpdateMultiThread("ByteBufferCacheAccessorTest", props,
                 new ByteBufferCacheAccessor<Integer, String>());
@@ -88,7 +88,7 @@ public class AbstractBlockedByteCacheAccessorPerfTest {
     @Test
     public void testMemoryMappedFileCacheAccessor() throws Exception {
 
-        PropertiesSupport builder = PropertiesSupport.builder();
+        PropertiesSupport.PropertiesBuilder builder = PropertiesSupport.builder();
         builder.set("reservoir.MemoryMappedFileCacheAccessor.blockSize", String.valueOf(blockSize));
         builder.set("reservoir.MemoryMappedFileCacheAccessor.coder", "net.ihiroky.reservoir.coder.SimpleStringCoder");
         int partitionSize = size / partitions;
@@ -98,13 +98,13 @@ public class AbstractBlockedByteCacheAccessorPerfTest {
         }
         builder.set("times", "500000");
 
-        testUpdateMultiThread("MemoryMappedFileCacheAccessorTest", builder.properties(),
+        testUpdateMultiThread("MemoryMappedFileCacheAccessorTest", builder.build(),
                 new MemoryMappedFileCacheAccessor<Integer, String>());
     }
 
     @Test
     public void testFileCacheAccessor() throws Exception {
-        PropertiesSupport builder = PropertiesSupport.builder();
+        PropertiesSupport.PropertiesBuilder builder = PropertiesSupport.builder();
         builder.set("reservoir.FileCacheAccessor.blockSize", String.valueOf(blockSize));
         builder.set("reservoir.FileCacheAccessor.coder", "net.ihiroky.reservoir.coder.SimpleStringCoder");
         int partitionSize = size / partitions;
@@ -114,7 +114,7 @@ public class AbstractBlockedByteCacheAccessorPerfTest {
         }
         builder.set("times", "150000");
 
-        testUpdateMultiThread("FileCacheAccessor", builder.properties(),
+        testUpdateMultiThread("FileCacheAccessor", builder.build(),
                 new FileCacheAccessor<Integer, String>());
     }
 }

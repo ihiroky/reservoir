@@ -527,7 +527,6 @@ public final class Reservoir {
         private Logger logger = LoggerFactory.getLogger(CacheBuilder.class);
 
         CacheBuilder() {
-            throw new AssertionError("Instantiation is not allowed.");
         }
 
         @Override
@@ -620,7 +619,6 @@ public final class Reservoir {
         private Logger logger = LoggerFactory.getLogger(BlockingQueueBuilder.class);
 
         BlockingQueueBuilder() {
-            throw new AssertionError("Instantiation is not allowed.");
         }
 
         @Override

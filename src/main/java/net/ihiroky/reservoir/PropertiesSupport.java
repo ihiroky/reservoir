@@ -24,32 +24,8 @@ public final class PropertiesSupport {
         properties = new Properties();
     }
 
-    public static PropertiesSupport builder() {
-        return new PropertiesSupport();
-    }
-
-    public PropertiesSupport set(String key, String value) {
-        properties.setProperty(key, value);
-        return this;
-    }
-
-    public PropertiesSupport set(Class<?> cls, String key, String value) {
-        properties.setProperty(key(cls, key), value);
-        return this;
-    }
-
-    public PropertiesSupport remove(String key) {
-        properties.remove(key);
-        return this;
-    }
-
-    public PropertiesSupport remove(Class<?> cls, String key) {
-        properties.remove(key(cls, key));
-        return this;
-    }
-
-    public Properties properties() {
-        return properties;
+    public static PropertiesBuilder builder() {
+        return new PropertiesBuilder();
     }
 
     public static boolean booleanValue(Properties props, String key, boolean defaultValue) {
@@ -121,5 +97,42 @@ public final class PropertiesSupport {
 
     public static String key(Class<?> cls, String key) {
         return KEY_PREFIX + baseName(cls) + '.' + key;
+    }
+
+    public final static class PropertiesBuilder {
+        Properties props;
+
+        private PropertiesBuilder() {
+            clear();
+        }
+
+        public void clear() {
+            props = new Properties();
+        }
+
+        public PropertiesBuilder set(String key, String value) {
+            props.setProperty(key, value);
+            return this;
+        }
+
+        public PropertiesBuilder set(Class<?> cls, String key, String value) {
+            props.setProperty(key(cls, key), value);
+            return this;
+        }
+
+        public PropertiesBuilder remove(String key) {
+            props.remove(key);
+            return this;
+        }
+
+        public PropertiesBuilder remove(Class<?> cls, String key) {
+            props.remove(key(cls, key));
+            return this;
+        }
+
+        public Properties build() {
+            return (Properties) props.clone();
+        }
+
     }
 }
