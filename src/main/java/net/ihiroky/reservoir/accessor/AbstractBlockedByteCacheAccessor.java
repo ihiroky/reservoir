@@ -41,21 +41,6 @@ public abstract class AbstractBlockedByteCacheAccessor<K, V>
     private static final ByteBuffer EMPTY_BUFFER = ByteBuffer.allocate(0).asReadOnlyBuffer();
     private static final List<ByteBlock> EMPTY_LIST = Collections.emptyList();
 
-    public enum RejectedAllocationPolicy implements RejectedAllocationHandler {
-        WAIT_FOR_FREE_BLOCK {
-            @Override
-            public void handle(AbstractBlockedByteCacheAccessor accessor) throws InterruptedException {
-                accessor.freeWaitMutex.wait();
-            }
-        },
-        ABORT {
-            @Override
-            public void handle(AbstractBlockedByteCacheAccessor accessor) throws InterruptedException {
-                throw new IllegalStateException("No free block is found. A ByteBlock allocation is aborted.");
-            }
-        }
-    }
-
     private ByteBlock allocate(K key, int listPosition) throws InterruptedException {
         for (;;) {
             ByteBlockManager[] bbbArray = byteBlockManagers;
@@ -129,6 +114,11 @@ public abstract class AbstractBlockedByteCacheAccessor<K, V>
     @Override
     public String getDecoderClassName() {
         return (decoder != null) ? decoder.getClass().getName() : "";
+    }
+
+    @Override
+    public String getRejectedAllocationHandlerName() {
+        return (rejectedAllocationHandler != null) ? rejectedAllocationHandler.toString() : "";
     }
 
     private class BlockedByteRef extends ReentrantReadWriteLock implements Ref<V> {
@@ -329,7 +319,7 @@ public abstract class AbstractBlockedByteCacheAccessor<K, V>
         try {
             return RejectedAllocationPolicy.valueOf(value);
         } catch (IllegalArgumentException ignored) {
-            // The value is not a member of RejectedAllocationPolicy.
+            // The value is not a member of RejectedAllocationHandler.
             // Try to instantiate as a sub class name of RejectedAllocationHandler.
         }
         try {

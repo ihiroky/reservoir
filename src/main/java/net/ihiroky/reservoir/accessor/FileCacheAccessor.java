@@ -75,7 +75,7 @@ public class FileCacheAccessor<K, V> extends AbstractBlockedByteCacheAccessor<K,
         String directory = props.getProperty(key(cn, KEY_DIRECTORY_SUFFIX));
         BulkInfo bulkInfo = new BulkInfo(totalSize, blockSize, partitions);
         try {
-            prepare(name, coder, directory, FileInfo.Mode.READ_WRITE, bulkInfo, createRejectedAllocationHandler(rah));
+            prepare(name, coder, new File(directory), FileInfo.Mode.READ_WRITE, bulkInfo, createRejectedAllocationHandler(rah));
         } catch (IOException ioe) {
             throw new RuntimeException("failed to prepare " + cn + " " + bulkInfo, ioe);
         }
@@ -114,7 +114,7 @@ public class FileCacheAccessor<K, V> extends AbstractBlockedByteCacheAccessor<K,
         return fileInfoMap.values();
     }
     public void prepare(final String name, Coder<V> coder,
-                        final String directory, final FileInfo.Mode mode,
+                        final File directory, final FileInfo.Mode mode,
                         BulkInfo bulkInfo, RejectedAllocationHandler rejectedAllocationHandler)
             throws IOException {
         if (name == null) {
@@ -126,7 +126,25 @@ public class FileCacheAccessor<K, V> extends AbstractBlockedByteCacheAccessor<K,
         if (bulkInfo == null) {
             throw new NullPointerException("bulkInfo must not be null.");
         }
+        if (directory == null) {
+            throw new NullPointerException("directory must not be null.");
+        }
+        if (mode == null) {
+            throw new NullPointerException("mode must not be null.");
+        }
 
+        if (directory.exists()) {
+            if (!directory.isDirectory()) {
+                throw new IllegalStateException(directory + " is not a directory.");
+            }
+        } else {
+            if (!directory.mkdirs()) {
+                throw new IllegalStateException("failed to create a directory : " + directory);
+            }
+            logger.warn("[prepare] create directories {}.", directory);
+        }
+
+        randomAccessFiles = new ArrayList<RandomAccessFile>();
         BulkInfo.ByteBlockManagerAllocator allocator = new BulkInfo.ByteBlockManagerAllocator() {
 
             @Override

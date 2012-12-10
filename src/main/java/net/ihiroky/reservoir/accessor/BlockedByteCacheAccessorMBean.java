@@ -21,4 +21,6 @@ public interface BlockedByteCacheAccessorMBean {
     String getEncoderClassName();
 
     String getDecoderClassName();
+
+    String getRejectedAllocationHandlerName();
 }
