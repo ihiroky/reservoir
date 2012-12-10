@@ -2,6 +2,7 @@ package net.ihiroky.reservoir.accessor;
 
 import net.ihiroky.reservoir.Coder;
 import net.ihiroky.reservoir.PropertiesSupport;
+import net.ihiroky.reservoir.Reservoir;
 import net.ihiroky.reservoir.coder.SerializableCoder;
 
 import java.nio.ByteBuffer;
@@ -21,6 +22,7 @@ public class ByteBufferCacheAccessor<K, V> extends AbstractBlockedByteCacheAcces
 
     private static final String KEY_DIRECT = "reservoir.ByteBufferCacheAccessor.direct";
     private static final String KEY_SIZE = "reservoir.ByteBufferCacheAccessor.size";
+    private static final String KEY_USAGE_PERCENT = "reservoir.ByteBufferCacheAccessor.usagePercent";
     private static final String KEY_BLOCK_SIZE = "reservoir.ByteBufferCacheAccessor.blockSize";
     private static final String KEY_PARTITIONS = "reservoir.ByteBufferCacheAccessor.partitions";
     private static final String KEY_CODER = "reservoir.ByteBufferCacheAccessor.coder";
@@ -32,9 +34,9 @@ public class ByteBufferCacheAccessor<K, V> extends AbstractBlockedByteCacheAcces
     private static final String KEY_CAPACITY_SUFFIX = ".capacity";
 
     private static final boolean DEFAULT_DIRECT = false;
-    private static final long DEFAULT_SIZE = 512 * 1024 * 1024;
+    private static final long DEFAULT_SIZE = 32 * 1024 * 1024;
     private static final int DEFAULT_BLOCK_SIZE = 512;
-    private static final int DEFAULT_PARTITIONS = 16;
+    private static final int DEFAULT_PARTITIONS = 1;
 
     static int maxPartitionSize(int blockSize) {
         return (Integer.MAX_VALUE / blockSize) * blockSize;
@@ -105,7 +107,10 @@ public class ByteBufferCacheAccessor<K, V> extends AbstractBlockedByteCacheAcces
         }
 
         boolean direct = PropertiesSupport.booleanValue(props, KEY_DIRECT, DEFAULT_DIRECT);
-        long size = PropertiesSupport.longValue(props, KEY_SIZE, DEFAULT_SIZE);
+        int usagePercent = PropertiesSupport.intValue(props, KEY_USAGE_PERCENT, 0);
+        long size = (usagePercent <= 0)
+                ? PropertiesSupport.longValue(props, KEY_SIZE, DEFAULT_SIZE)
+                : Reservoir.getMaxDirectMemorySize() / 100L * usagePercent;
         int partitions = PropertiesSupport.intValue(props, KEY_PARTITIONS, DEFAULT_PARTITIONS);
         BulkInfo bulkInfo = new BulkInfo(size, blockSize, partitions);
         prepare(name, direct, coder, bulkInfo, createRejectedAllocationHandler(rah));

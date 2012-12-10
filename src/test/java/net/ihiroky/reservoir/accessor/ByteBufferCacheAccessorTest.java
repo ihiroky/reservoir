@@ -4,6 +4,7 @@ import net.ihiroky.reservoir.CacheAccessor;
 import net.ihiroky.reservoir.Index;
 import net.ihiroky.reservoir.PropertiesSupport;
 import net.ihiroky.reservoir.Ref;
+import net.ihiroky.reservoir.Reservoir;
 import net.ihiroky.reservoir.index.SimpleIndex;
 import org.junit.After;
 import org.junit.Before;
@@ -87,7 +88,23 @@ public class ByteBufferCacheAccessorTest {
         } finally {
             instance.dispose();
         }
+    }
 
+    @Test
+    public void testPrepareUsagePercent() {
+        Properties props2 = PropertiesSupport.builder()
+                .set(ByteBufferCacheAccessor.class, "direct", "true")
+                .set(ByteBufferCacheAccessor.class, "usagePercent", "10")
+                .set(ByteBufferCacheAccessor.class, "blockSize", "256")
+                .set(ByteBufferCacheAccessor.class, "partitions", "1")
+                .properties();
+
+        ByteBufferCacheAccessor<Integer, String> instance = new ByteBufferCacheAccessor<Integer, String>();
+        disposeSet.add(instance);
+        instance.prepare("ByteBufferCacheAccessorTest#testPrepareUsagePercent", props2);
+        assertThat(instance.getWholeBlocks(), is(Reservoir.getMaxDirectMemorySize() / 256 / 10));
+        assertThat(instance.getBlockSize(), is(256));
+        assertThat(instance.getPartitions(), is(1));
     }
 
     @Test

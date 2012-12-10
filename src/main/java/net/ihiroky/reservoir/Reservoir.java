@@ -183,6 +183,45 @@ public final class Reservoir {
     static final long UNIT_K = 1024;
     static final long UNIT_M = 1024 * UNIT_K;
     static final long UNIT_G = 1024 * UNIT_M;
+    static final long DEFAULT_DIRECT_MEMORY_SIZE = 64 * UNIT_M; // JVM default value for direct byte buffer.
+
+    private static class LazyInitializationFieldHolder {
+        static long MAX_DIRECT_MEMORY_SIZE = parseMaxDirectMemoryValue();
+
+        static final String KEY_MAX_DIRECT_MEMORY_SIZE = "-XX:MaxDirectMemorySize";
+
+        static long parseMaxDirectMemoryValue() {
+            RuntimeMXBean bean = ManagementFactory.getRuntimeMXBean();
+            for (String inputArgument : bean.getInputArguments()) {
+                if (inputArgument.startsWith(KEY_MAX_DIRECT_MEMORY_SIZE)) {
+                    int eq = inputArgument.indexOf('=');
+                    if (eq == -1) {
+
+                    }
+                    int tail = inputArgument.length() - 1;
+                    char unitMark = Character.toUpperCase(inputArgument.charAt(tail));
+                    long value = (unitMark >= 0 && unitMark <= 9)
+                            ? Long.parseLong(inputArgument.substring(eq + 1))
+                            : Long.parseLong(inputArgument.substring(eq + 1, tail));
+                    switch (unitMark) {
+                        case 'K':
+                            return value * UNIT_K;
+                        case 'M':
+                            return value * UNIT_M;
+                        case 'G':
+                            return value * UNIT_G;
+                        default:
+                            return value;
+                    }
+                }
+            }
+            return DEFAULT_DIRECT_MEMORY_SIZE;
+        }
+    }
+
+    public static long getMaxDirectMemorySize() {
+        return LazyInitializationFieldHolder.MAX_DIRECT_MEMORY_SIZE;
+    }
 
     private static abstract class CacheAccessorBuilder<T extends CacheAccessorBuilder<T>> {
         int blockSize;
@@ -191,7 +230,6 @@ public final class Reservoir {
         Class<?> coderClass;
 
         static final int MIN_BYTES_PER_BLOCK = 8;
-        static final int DEFAULT_SIZE = (int) (64 * UNIT_M);
         static final int DEFAULT_BLOCK_SIZE = 512;
         static final int DEFAULT_PARTITIONS = 1;
 
@@ -263,35 +301,6 @@ public final class Reservoir {
             byteBufferInfoList = new ArrayList<ByteBufferInfo>();
         }
 
-        static long getMaxDirectMemorySize() {
-            final String MAX_DIRECT_MEMORY_SIZE = "-XX:MaxDirectMemorySize";
-            RuntimeMXBean bean = ManagementFactory.getRuntimeMXBean();
-            for (String inputArgument : bean.getInputArguments()) {
-                if (inputArgument.startsWith(MAX_DIRECT_MEMORY_SIZE)) {
-                    int eq = inputArgument.indexOf('=');
-                    if (eq == -1) {
-
-                    }
-                    int tail = inputArgument.length() - 1;
-                    char unitMark = Character.toUpperCase(inputArgument.charAt(tail));
-                    long value = (unitMark >= 0 && unitMark <= 9)
-                            ? Long.parseLong(inputArgument.substring(eq + 1))
-                            : Long.parseLong(inputArgument.substring(eq + 1, tail));
-                    switch (unitMark) {
-                        case 'K':
-                            return value * UNIT_K;
-                        case 'M':
-                            return value * UNIT_M;
-                        case 'G':
-                            return value * UNIT_G;
-                        default:
-                            return value;
-                    }
-                }
-            }
-            return DEFAULT_SIZE;
-        }
-
         @Override
         @SuppressWarnings("unchecked")
         <K, V> CacheAccessor<K, V> build(String name) {
@@ -353,7 +362,7 @@ public final class Reservoir {
             super.clear();
             directory = DEFAULT_DIRECTORY;
             mode = FileInfo.Mode.READ_WRITE;
-            totalSize = DEFAULT_SIZE;
+            totalSize = DEFAULT_DIRECT_MEMORY_SIZE;
         }
 
         @Override
