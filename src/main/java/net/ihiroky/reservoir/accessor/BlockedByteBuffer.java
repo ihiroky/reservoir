@@ -244,10 +244,11 @@ public class BlockedByteBuffer implements BlockedByteBufferMBean, ByteBlockManag
 
         @Override
         public int put(int position, byte[] bytes, int offset, int length) {
-            if (position < 0 || (position + length) > bytesPerBlock) {
-                throw new IndexOutOfBoundsException("position:" + position + ", length:" + length + ", capacity:" + bytesPerBlock);
+            if (position < 0 || position >= bytesPerBlock) {
+                throw new IndexOutOfBoundsException("position:" + position + ", capacity:" + bytesPerBlock);
             }
-            int written = (length <= bytesPerBlock) ? length : bytesPerBlock;
+            int left = bytesPerBlock - position;
+            int written = (length <= left) ? length : left;
             int bufferOffset = blockIndex * bytesPerBlock + position;
             boolean valid;
             synchronized (byteBuffer) {

@@ -276,10 +276,11 @@ public class BlockedFile implements ByteBlockManager, BlockedFileMBean {
         }
 
         public int put(int position, byte[] bytes, int offset, int length) {
-            if (position < 0 || (position + length) > bytesPerBlock) {
-                throw new IndexOutOfBoundsException("position:" + position + ", length:" + length + ", capacity:" + bytesPerBlock);
+            if (position < 0 || position >= bytesPerBlock) {
+                throw new IndexOutOfBoundsException("position:" + position + ", capacity:" + bytesPerBlock);
             }
-            int written = (int) ((length <= bytesPerBlock) ? length : bytesPerBlock);
+            int left = (int)(bytesPerBlock - position);
+            int written = (length <= left) ? length : left;
             long bufferOffset = blockIndex * bytesPerBlock + position;
             try {
                 synchronized (randomAccessFile) {

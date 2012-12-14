@@ -38,7 +38,7 @@ public abstract class AbstractBlockedByteCacheAccessor<K, V>
 
     private Logger logger = LoggerFactory.getLogger(AbstractBlockedByteCacheAccessor.class);
 
-    private static final ByteBuffer EMPTY_BUFFER = ByteBuffer.allocate(0).asReadOnlyBuffer();
+    private static final ByteBuffer EMPTY_BUFFER = ByteBuffer.allocate(0); // automatically readonly.
     private static final List<ByteBlock> EMPTY_LIST = Collections.emptyList();
 
     private ByteBlock allocate(K key, int listPosition) throws InterruptedException {
@@ -178,9 +178,7 @@ public abstract class AbstractBlockedByteCacheAccessor<K, V>
         }
 
         private ByteBuffer asByteBuffer() {
-            byte[] buffer = new byte[blockSize];
-            int read;
-            ByteBuffer bb;
+            byte[] result;
             ReadLock readLock = readLock();
             readLock.lock();
             try {
@@ -188,26 +186,24 @@ public abstract class AbstractBlockedByteCacheAccessor<K, V>
                 if (length == 0) {
                     return EMPTY_BUFFER;
                 }
-                bb = ByteBuffer.allocate(length);
+                int offset = 0;
+                result = new byte[length];
                 for (ByteBlock block : blockList) {
-                    // TODO direct copy
-                    read = block.get(0, buffer, 0, length);
-                    bb.put(buffer, 0, read);
-                    if ((length -= read) == 0) {
+                    offset += block.get(0, result, offset, length - offset);
+                    if (offset == length) {
                         break;
                     }
                 }
             } finally {
                 readLock.unlock();
             }
-            bb.flip();
-            return bb;
+            return ByteBuffer.wrap(result);
         }
 
         private boolean flush(K key, ByteBuffer byteBuffer) {
-            byte[] buffer = new byte[blockSize];
             int listPosition = 0;
-            int length;
+            int offset = 0;
+            byte[] input = byteBuffer.array();
             int inputLength = byteBuffer.remaining();
             ByteBlock block;
             WriteLock writeLock = writeLock();
@@ -217,10 +213,7 @@ public abstract class AbstractBlockedByteCacheAccessor<K, V>
                     blockList = new ArrayList<ByteBlock>();
                 }
                 bytes = inputLength;
-                while (byteBuffer.hasRemaining()) {
-                    length = (byteBuffer.remaining() >= buffer.length) ? buffer.length : byteBuffer.remaining();
-                    // TODO direct copy
-                    byteBuffer.get(buffer, 0, length);
+                while (offset < inputLength) {
                     if (listPosition < blockList.size()) {
                         block = blockList.get(listPosition);
                     } else {
@@ -232,7 +225,7 @@ public abstract class AbstractBlockedByteCacheAccessor<K, V>
                         blockList.add(block);
                     }
                     listPosition++;
-                    block.put(0, buffer, 0, length);
+                    offset += block.put(0, input, offset, inputLength - offset);
                 }
                 freeTailWithoutLock(listPosition);
             } catch (InterruptedException ie) {

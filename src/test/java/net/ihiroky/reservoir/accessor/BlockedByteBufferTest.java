@@ -209,7 +209,7 @@ public class BlockedByteBufferTest {
         } catch (IndexOutOfBoundsException e) {
         }
         try {
-            block1.put(9, put, 0, put.length);
+            block1.put(16, put, 0, put.length);
             fail();
         } catch (IndexOutOfBoundsException e) {
         }
@@ -222,7 +222,7 @@ public class BlockedByteBufferTest {
         block1.get(0, get, 0, get.length);
         assertThat(get, is(expected));
         try {
-            block1.put(8, put, 0, 9);
+            block1.put(16, put, 0, 9);
             fail();
         } catch (IndexOutOfBoundsException e) {
         }
