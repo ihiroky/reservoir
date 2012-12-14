@@ -9,12 +9,11 @@ public interface RejectedAllocationHandler {
     abstract class AllocateByteBlockManager implements RejectedAllocationHandler {
         @Override
         public boolean handle(AbstractBlockedByteCacheAccessor<?, ?> accessor) throws InterruptedException {
-            ByteBlockManager byteBlockManager = createByteBlockManager(accessor, accessor.freeWaitMutex);
+            ByteBlockManager byteBlockManager = createByteBlockManager(accessor);
             accessor.addByteBlockManager(byteBlockManager);
             return true;
         }
 
-        public abstract ByteBlockManager createByteBlockManager(
-                AbstractBlockedByteCacheAccessor<?, ?> accessor, Object freeWaitMutex);
+        public abstract ByteBlockManager createByteBlockManager(AbstractBlockedByteCacheAccessor<?, ?> accessor);
     }
 }

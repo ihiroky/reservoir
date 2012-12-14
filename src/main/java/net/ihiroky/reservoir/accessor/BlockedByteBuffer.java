@@ -19,17 +19,13 @@ public class BlockedByteBuffer implements BlockedByteBufferMBean, ByteBlockManag
     private final int maxLength;
     private final int maxBlocks;
     private volatile int allocatedBlocks;
-    private final Object freeWaitMutex;
 
     private static final int INVALID_INDEX = -1;
     static final int MIN_BYTES_PER_BLOCK = 4;
 
-    public BlockedByteBuffer(ByteBuffer byteBuffer, int bytesPerBlock, Object freeWaitMutex) {
+    public BlockedByteBuffer(ByteBuffer byteBuffer, int bytesPerBlock) {
         if (byteBuffer == null) {
             throw new NullPointerException("byteBuffer must not be null.");
-        }
-        if (freeWaitMutex == null) {
-            throw new NullPointerException("freeWaitMutex must not be null.");
         }
         if (bytesPerBlock < MIN_BYTES_PER_BLOCK) {
             throw new IllegalArgumentException("bytesPerBlock must be >= 4.");
@@ -45,7 +41,6 @@ public class BlockedByteBuffer implements BlockedByteBufferMBean, ByteBlockManag
         this.maxLength = blocks * bytesPerBlock;
         this.freeHeadIndex = 0;
         this.freeTailIndex = maxLength - bytesPerBlock;
-        this.freeWaitMutex = freeWaitMutex;
     }
 
     void setName(String name) {
@@ -82,9 +77,6 @@ public class BlockedByteBuffer implements BlockedByteBufferMBean, ByteBlockManag
             freeHeadIndex = freeTailIndex = index;
         }
         allocatedBlocks--;
-        synchronized (freeWaitMutex) {
-            freeWaitMutex.notifyAll();
-        }
     }
 
     @Override

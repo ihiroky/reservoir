@@ -23,7 +23,7 @@ public class BlockedFileTest extends BlockedByteBufferTest {
         File file = folder.newFile();
         RandomAccessFile raf = new RandomAccessFile(file, "rw");
         raf.setLength(64);
-        return new BlockedFile(file.getPath(), raf, 16, this);
+        return new BlockedFile(file.getPath(), raf, 16);
     }
 
     @Override

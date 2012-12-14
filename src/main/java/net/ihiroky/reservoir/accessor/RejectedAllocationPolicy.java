@@ -7,7 +7,7 @@ public enum RejectedAllocationPolicy implements RejectedAllocationHandler {
     WAIT_FOR_FREE_BLOCK {
         @Override
         public boolean handle(AbstractBlockedByteCacheAccessor accessor) throws InterruptedException {
-            accessor.freeWaitMutex.wait();
+            accessor.waitOnFreeWaitMutex();
             return true;
         }
     },

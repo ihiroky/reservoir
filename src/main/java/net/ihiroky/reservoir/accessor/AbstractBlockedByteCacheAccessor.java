@@ -34,7 +34,7 @@ public abstract class AbstractBlockedByteCacheAccessor<K, V>
     private Coder.Decoder<V> decoder;
 
     private RejectedAllocationHandler rejectedAllocationHandler = RejectedAllocationPolicy.ABORT;
-    protected final Object freeWaitMutex = new Object();
+    private final Object freeWaitMutex = new Object();
 
     private Logger logger = LoggerFactory.getLogger(AbstractBlockedByteCacheAccessor.class);
 
@@ -46,21 +46,26 @@ public abstract class AbstractBlockedByteCacheAccessor<K, V>
             ByteBlockManager[] bbbArray = byteBlockManagers;
             int length = bbbArray.length;
             int bbbIndex = positiveHash(key, listPosition) % length;
-            synchronized (freeWaitMutex) {
-                ByteBlock newBlock = bbbArray[bbbIndex].allocate();
+            ByteBlock newBlock = bbbArray[bbbIndex].allocate();
+            if (newBlock != null) {
+                return newBlock;
+            }
+            for (int i = 1; i < length; i++) {
+                newBlock = bbbArray[(bbbIndex + i) % length].allocate();
                 if (newBlock != null) {
                     return newBlock;
                 }
-                for (int i = 1; i < length; i++) {
-                    newBlock = bbbArray[(bbbIndex + i) % length].allocate();
-                    if (newBlock != null) {
-                        return newBlock;
-                    }
-                }
-                isContinue = rejectedAllocationHandler.handle(this);
             }
+            isContinue = rejectedAllocationHandler.handle(this);
         }
         return null;
+    }
+
+    void waitOnFreeWaitMutex() throws InterruptedException {
+        // allow spurious wake up.
+        synchronized (freeWaitMutex) {
+            freeWaitMutex.wait();
+        }
     }
 
     void addByteBlockManager(ByteBlockManager byteBlockManager) {
@@ -156,8 +161,20 @@ public abstract class AbstractBlockedByteCacheAccessor<K, V>
             for (ByteBlock block : blockList) {
                 block.free();
             }
+            synchronized (freeWaitMutex) {
+                freeWaitMutex.notifyAll();
+            }
             bytes = 0;
             blockList = EMPTY_LIST;
+        }
+
+        private void freeTailWithoutLock(int listPosition) {
+            for (int i = blockList.size() - 1; i >= listPosition; i--) {
+                blockList.remove(i).free();
+            }
+            synchronized (freeWaitMutex) {
+                freeWaitMutex.notifyAll();
+            }
         }
 
         private ByteBuffer asByteBuffer() {
@@ -217,9 +234,7 @@ public abstract class AbstractBlockedByteCacheAccessor<K, V>
                     listPosition++;
                     block.put(0, buffer, 0, length);
                 }
-                for (int i = blockList.size() - 1; i >= listPosition; i--) {
-                    blockList.remove(i).free();
-                }
+                freeTailWithoutLock(listPosition);
             } catch (InterruptedException ie) {
                 freeWithoutWriteLock();
                 throw new RuntimeException("ByteBlock allocation is failed by InterruptedException.", ie);

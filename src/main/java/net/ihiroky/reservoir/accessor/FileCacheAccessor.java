@@ -204,8 +204,7 @@ public class FileCacheAccessor<K, V> extends AbstractBlockedByteCacheAccessor<K,
 
     protected ByteBlockManager createInstance(
             String name, File file, RandomAccessFile randomAccessFile, int blockSize) throws IOException {
-        BlockedFile blockedFile =
-                new BlockedFile(file.getAbsolutePath(), randomAccessFile, blockSize, super.freeWaitMutex);
+        BlockedFile blockedFile = new BlockedFile(file.getAbsolutePath(), randomAccessFile, blockSize);
         blockedFile.setName(name);
         return blockedFile;
     }

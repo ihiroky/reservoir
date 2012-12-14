@@ -22,18 +22,13 @@ public class BlockedFile implements ByteBlockManager, BlockedFileMBean {
     private final long maxLength;
     private final long maxBlocks;
     private volatile long allocatedBlocks;
-    private final Object freeWaitMutex;
 
     private static final int INVALID_INDEX = -1;
     static final int MIN_BYTES_PER_BLOCK = 8;
 
-    public BlockedFile(String filePath, RandomAccessFile randomAccessFile,
-                       int bytesPerBlock, Object freeWaitMutex) throws IOException {
+    public BlockedFile(String filePath, RandomAccessFile randomAccessFile, int bytesPerBlock) throws IOException {
         if (randomAccessFile == null) {
             throw new NullPointerException("byteBuffer must not be null.");
-        }
-        if (freeWaitMutex == null) {
-            throw new NullPointerException("freeWaitMutex must not be null.");
         }
         if (bytesPerBlock < MIN_BYTES_PER_BLOCK) {
             throw new IllegalArgumentException("bytesPerBlock must be >= 4.");
@@ -51,7 +46,6 @@ public class BlockedFile implements ByteBlockManager, BlockedFileMBean {
         this.maxLength = blocks * bytesPerBlock;
         this.freeHeadIndex = 0;
         this.freeTailIndex = maxLength - bytesPerBlock;
-        this.freeWaitMutex = freeWaitMutex;
     }
 
     void setName(String name) {
@@ -100,9 +94,6 @@ public class BlockedFile implements ByteBlockManager, BlockedFileMBean {
             freeHeadIndex = freeTailIndex = index;
         }
         allocatedBlocks--;
-        synchronized (freeWaitMutex) {
-            freeWaitMutex.notifyAll();
-        }
     }
 
     public synchronized void free() {

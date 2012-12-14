@@ -56,7 +56,7 @@ public class ByteBufferCacheAccessor<K, V> extends AbstractBlockedByteCacheAcces
         for (ByteBufferInfo byteBufferInfo : byteBufferInfos) {
             ByteBuffer byteBuffer = byteBufferInfo.direct
                     ? ByteBuffer.allocateDirect(byteBufferInfo.capacity) : ByteBuffer.allocate(byteBufferInfo.capacity);
-            bbbArray[count++] = new BlockedByteBuffer(byteBuffer, blockSize, super.freeWaitMutex);
+            bbbArray[count++] = new BlockedByteBuffer(byteBuffer, blockSize);
         }
         prepare(name, bbbArray, blockSize, coder, rejectedAllocationHandler);
     }
@@ -81,8 +81,7 @@ public class ByteBufferCacheAccessor<K, V> extends AbstractBlockedByteCacheAcces
             public ByteBlockManager allocate(long size, int blockSize, int index) {
                 ByteBuffer byteBuffer = direct ?
                         ByteBuffer.allocateDirect((int)size) : ByteBuffer.allocate((int)size);
-                BlockedByteBuffer bbb = new BlockedByteBuffer(
-                        byteBuffer, blockSize, ByteBufferCacheAccessor.super.freeWaitMutex);
+                BlockedByteBuffer bbb = new BlockedByteBuffer(byteBuffer, blockSize);
                 bbb.setName(name + '-' + String.format("%05d", index));
                 return bbb;
             }
