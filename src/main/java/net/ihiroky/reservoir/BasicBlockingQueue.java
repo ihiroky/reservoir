@@ -13,6 +13,7 @@ import java.util.concurrent.TimeUnit;
 public class BasicBlockingQueue<E> extends AbstractBasicQueue<E, LinkedBlockingQueue<Ref<E>>>
         implements BlockingQueue<E> {
 
+    private final Object mutex = new Object();
 
     BasicBlockingQueue(String name, CacheAccessor<Object, E> cacheAccessor) {
         super(name, cacheAccessor, new LinkedBlockingQueue<Ref<E>>());
@@ -28,7 +29,20 @@ public class BasicBlockingQueue<E> extends AbstractBasicQueue<E, LinkedBlockingQ
             throw new NullPointerException("e must not be null.");
         }
         Ref<E> ref = cacheAccessor.create(null, e);
-        refQueue.put(ref);
+        if (ref == null) {
+            synchronized (mutex) {
+                while (ref == null) {
+                    mutex.wait();
+                    ref = cacheAccessor.create(null, e);
+                }
+            }
+        }
+        try {
+            refQueue.put(ref);
+        } catch (InterruptedException ie) {
+            cacheAccessor.remove(null, ref);
+            throw ie;
+        }
     }
 
     @Override
@@ -41,8 +55,29 @@ public class BasicBlockingQueue<E> extends AbstractBasicQueue<E, LinkedBlockingQ
         }
 
         Ref<E> ref = cacheAccessor.create(null, e);
+        long timeoutMillis = unit.toMillis(timeout);
+        if (ref == null) {
+            long now = System.currentTimeMillis();
+            long startWait = now;
+            synchronized (mutex) {
+                while (ref == null && timeoutMillis > 0) {
+                    mutex.wait(timeoutMillis);
+                    now = System.currentTimeMillis();
+                    timeoutMillis -= (now - startWait);
+                    startWait = now;
+                    ref = cacheAccessor.create(null, e);
+                }
+            }
+            if (ref == null) {
+                return false;
+            }
+        }
         try {
-            return refQueue.offer(ref, timeout, unit);
+            if (refQueue.offer(ref, timeoutMillis, TimeUnit.MILLISECONDS)) {
+                return true;
+            }
+            cacheAccessor.remove(null, ref);
+            return false;
         } catch (InterruptedException ie) {
             cacheAccessor.remove(null, ref);
             throw ie;
@@ -54,6 +89,9 @@ public class BasicBlockingQueue<E> extends AbstractBasicQueue<E, LinkedBlockingQ
         Ref<E> ref = refQueue.take();
         E result = ref.value();
         cacheAccessor.remove(null, ref);
+        synchronized (mutex) {
+            mutex.notifyAll();
+        }
         return result;
     }
 
@@ -65,6 +103,9 @@ public class BasicBlockingQueue<E> extends AbstractBasicQueue<E, LinkedBlockingQ
         }
         E result = ref.value();
         cacheAccessor.remove(null, ref);
+        synchronized (mutex) {
+            mutex.notifyAll();
+        }
         return result;
     }
 
@@ -81,6 +122,11 @@ public class BasicBlockingQueue<E> extends AbstractBasicQueue<E, LinkedBlockingQ
             c.add(ref.value());
             cacheAccessor.remove(null, ref);
         }
+        if (result > 0) {
+            synchronized (mutex) {
+                mutex.notifyAll();
+            }
+        }
         return result;
     }
 
@@ -91,6 +137,11 @@ public class BasicBlockingQueue<E> extends AbstractBasicQueue<E, LinkedBlockingQ
         for (Ref<E> ref : refList) {
             c.add(ref.value());
             cacheAccessor.remove(null, ref);
+        }
+        if (result > 0) {
+            synchronized (mutex) {
+                mutex.notifyAll();
+            }
         }
         return result;
     }
@@ -103,12 +154,9 @@ public class BasicBlockingQueue<E> extends AbstractBasicQueue<E, LinkedBlockingQ
         }
         E e = ref.value();
         cacheAccessor.remove(null, ref);
+        synchronized (mutex) {
+            mutex.notifyAll();
+        }
         return e;
-    }
-
-    @Override
-    public E peek() {
-        Ref<E> ref = refQueue.peek();
-        return (ref != null) ? ref.value() : null;
     }
 }

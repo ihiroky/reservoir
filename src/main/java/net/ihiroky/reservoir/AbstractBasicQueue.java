@@ -57,7 +57,7 @@ abstract class AbstractBasicQueue<E, Q extends Queue<Ref<E>>> extends AbstractQu
             @Override
             public void remove() {
                 base.remove();
-                cacheAccessor.remove(current.hashCode(), current);
+                cacheAccessor.remove(null, current);
             }
         };
     }
@@ -72,8 +72,15 @@ abstract class AbstractBasicQueue<E, Q extends Queue<Ref<E>>> extends AbstractQu
         if (e == null) {
             throw new NullPointerException("e must not be null.");
         }
-        Ref<E> ref = cacheAccessor.create(e.hashCode(), e);
-        return refQueue.offer(ref);
+
+        Ref<E> ref = cacheAccessor.create(null, e);
+        if (ref != null) {
+            if (refQueue.offer(ref)) {
+                return true;
+            }
+            cacheAccessor.remove(null, ref);
+        }
+        return false;
     }
 
     @Override
@@ -83,7 +90,7 @@ abstract class AbstractBasicQueue<E, Q extends Queue<Ref<E>>> extends AbstractQu
             return null;
         }
         E e = ref.value();
-        cacheAccessor.remove(e.hashCode(), ref);
+        cacheAccessor.remove(null, ref);
         return e;
     }
 

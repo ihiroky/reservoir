@@ -12,8 +12,8 @@ public class NoEnoughFreeBlockException extends IllegalStateException {
 
     private Collection<Object> failedKeys;
 
-    public NoEnoughFreeBlockException(String s, Throwable t, Collection<Object> failedKeys) {
-        super(s, t);
+    public NoEnoughFreeBlockException(String s, Collection<Object> failedKeys) {
+        super(s);
         this.failedKeys = (failedKeys != null) ?
                 Collections.unmodifiableCollection(failedKeys) : Collections.<Object>emptyList();
     }

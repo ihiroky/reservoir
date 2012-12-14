@@ -62,8 +62,9 @@ public class HeapCacheAccessor<K, V> implements CacheAccessor<K, V> {
     }
 
     @Override
-    public void update(K key, V value, Index<K, Ref<V>> index) {
+    public boolean update(K key, V value, Index<K, Ref<V>> index) {
         updateEntry(key, value, index);
+        return true;
     }
 
     @Override

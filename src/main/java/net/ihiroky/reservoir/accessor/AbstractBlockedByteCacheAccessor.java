@@ -42,7 +42,7 @@ public abstract class AbstractBlockedByteCacheAccessor<K, V>
     private static final List<ByteBlock> EMPTY_LIST = Collections.emptyList();
 
     private ByteBlock allocate(K key, int listPosition) throws InterruptedException {
-        for (;;) {
+        for (boolean isContinue = true; isContinue; ) {
             ByteBlockManager[] bbbArray = byteBlockManagers;
             int length = bbbArray.length;
             int bbbIndex = positiveHash(key, listPosition) % length;
@@ -57,9 +57,10 @@ public abstract class AbstractBlockedByteCacheAccessor<K, V>
                         return newBlock;
                     }
                 }
-                rejectedAllocationHandler.handle(this);
+                isContinue = rejectedAllocationHandler.handle(this);
             }
         }
+        return null;
     }
 
     void addByteBlockManager(ByteBlockManager byteBlockManager) {
@@ -133,12 +134,12 @@ public abstract class AbstractBlockedByteCacheAccessor<K, V>
         @Override
         public V value() {
             ByteBuffer byteBuffer = asByteBuffer();
-            return byteBuffer.hasRemaining() ? decoder.decode(byteBuffer) : null;
+            return decoder.decode(byteBuffer);
         }
 
-        void update(K key, V value) {
+        boolean update(K key, V value) {
             ByteBuffer encoded = encoder.encode(value);
-            flush(key, encoded);
+            return flush(key, encoded);
         }
 
         void free() {
@@ -186,7 +187,7 @@ public abstract class AbstractBlockedByteCacheAccessor<K, V>
             return bb;
         }
 
-        private void flush(K key, ByteBuffer byteBuffer) {
+        private boolean flush(K key, ByteBuffer byteBuffer) {
             byte[] buffer = new byte[blockSize];
             int listPosition = 0;
             int length;
@@ -207,6 +208,10 @@ public abstract class AbstractBlockedByteCacheAccessor<K, V>
                         block = blockList.get(listPosition);
                     } else {
                         block = allocate(key, listPosition);
+                        if (block == null) {
+                            freeWithoutWriteLock();
+                            return false;
+                        }
                         blockList.add(block);
                     }
                     listPosition++;
@@ -224,6 +229,7 @@ public abstract class AbstractBlockedByteCacheAccessor<K, V>
             } finally {
                 writeLock.unlock();
             }
+            return true;
         }
 
         @Override
@@ -246,9 +252,9 @@ public abstract class AbstractBlockedByteCacheAccessor<K, V>
         }
     }
 
-    private void updateEntry(K key, V value, Index<K, Ref<V>> index) {
+    private boolean updateEntry(K key, V value, Index<K, Ref<V>> index) {
         if (key == null) {
-            return;
+            return false;
         }
 
         BlockedByteRef ref = new BlockedByteRef();
@@ -257,40 +263,34 @@ public abstract class AbstractBlockedByteCacheAccessor<K, V>
         if (oldRef != null) {
             ref = oldRef;
         }
-        ref.update(key, value);
+        return ref.update(key, value);
     }
 
     @Override
     public Ref<V> create(K key, V value) {
         BlockedByteRef ref = new BlockedByteRef();
-        ref.update(key, value);
-        return ref;
+        return ref.update(key, value) ? ref : null;
     }
 
     @Override
-    public void update(K key, V value, Index<K, Ref<V>> index) {
-        updateEntry(key, value, index);
+    public boolean update(K key, V value, Index<K, Ref<V>> index) {
+        return updateEntry(key, value, index);
     }
 
     @Override
     public void update(Map<K, V> keyValues, Index<K, Ref<V>> index) {
         Iterator<Map.Entry<K, V>> iterator = keyValues.entrySet().iterator();
-        Map.Entry<K, V> entry = null;
-        try {
-            while (iterator.hasNext()) {
-                entry = iterator.next();
-                updateEntry(entry.getKey(), entry.getValue(), index);
-            }
-        } catch (IllegalStateException ise) {
-            Collection<Object> failedKeys = new ArrayList<Object>();
-            if (entry != null) {
+        Map.Entry<K, V> entry;
+        while (iterator.hasNext()) {
+            entry = iterator.next();
+            if (!updateEntry(entry.getKey(), entry.getValue(), index)) {
+                Collection<Object> failedKeys = new ArrayList<Object>();
                 failedKeys.add(entry.getKey());
+                while (iterator.hasNext()) {
+                    failedKeys.add(iterator.next().getKey());
+                }
+                throw new NoEnoughFreeBlockException("failed to update blocks.", failedKeys);
             }
-            while (iterator.hasNext()) {
-                failedKeys.add(iterator.next().getKey());
-            }
-            throw new NoEnoughFreeBlockException(
-                    "failed to update blocks.", ise, failedKeys);
         }
     }
 

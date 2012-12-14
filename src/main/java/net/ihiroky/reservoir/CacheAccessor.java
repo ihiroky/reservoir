@@ -13,7 +13,7 @@ public interface CacheAccessor<K, V> {
 
     Ref<V> create(K key, V value);
 
-    void update(K key, V value, Index<K, Ref<V>> index);
+    boolean update(K key, V value, Index<K, Ref<V>> index);
 
     void update(Map<K, V> keyValues, Index<K, Ref<V>> index);
 
