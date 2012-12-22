@@ -145,7 +145,18 @@ public class BasicCache<K, V> extends AbstractCache<K, V> implements CacheMBean 
      */
     @Override
     public void clear() {
-        index.clear();
+        Map.Entry<K, Ref<V>> entry;
+        K key;
+        Ref<V> ref;
+        // No event happens when index entry set calls. So refIndexEventListener is directly called here.
+        for (Iterator<Map.Entry<K, Ref<V>>> iterator = index.entrySet().iterator(); iterator.hasNext(); ) {
+            entry = iterator.next();
+            key = entry.getKey();
+            ref = entry.getValue();
+            iterator.remove();
+            refIndexEventListener.onRemove(index, key, ref);
+            cacheAccessor.remove(key, ref);
+        }
     }
 
     /**
