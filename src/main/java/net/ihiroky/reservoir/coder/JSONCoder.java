@@ -65,7 +65,7 @@ public abstract class JSONCoder<K, V> implements StreamingCoder<K, V> {
         }
     };
 
-    public JSONCoder<String, String> getStringCoder() {
+    public static JSONCoder<String, String> getStringCoder() {
         return STRING_CODER;
     }
 
@@ -147,10 +147,10 @@ public abstract class JSONCoder<K, V> implements StreamingCoder<K, V> {
                 case FIELD_NAME:
                     String name = parser.getCurrentName();
                     if (KEY.equals(name)) {
-                        token = parser.nextToken();
+                        parser.nextToken();
                         key = readKey(reader);
                     } else if (VALUE.equals(name)) {
-                        token = parser.nextToken();
+                        parser.nextToken();
                         value = readValue(reader);
                     }
                     break;
@@ -191,13 +191,12 @@ public abstract class JSONCoder<K, V> implements StreamingCoder<K, V> {
                     + JsonToken.START_ARRAY + " or " + JsonToken.START_OBJECT);
         }
         JsonReader reader = new JsonReader(parser);
-        K key = null;
-        V value = null;
+        K key;
         while ((token = parser.nextToken()) != endToken) {
             if (token == JsonToken.FIELD_NAME) {
                 String name = parser.getCurrentName();
                 if (KEY.equals(name)) {
-                    token = parser.nextToken();
+                    parser.nextToken();
                     key = readKey(reader);
                     cache.remove(key);
                 }

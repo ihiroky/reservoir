@@ -1,14 +1,21 @@
 package net.ihiroky.reservoir;
 
 /**
- * Created on 12/10/18, 15:18
+ * Resolves {@code String} value to a type value .
  *
+ * @param <K> the type of value to be resolved.
  * @author Hiroki Itoh
  */
 public interface StringResolver<K> {
 
+    /**
+     * Resolves a {@code String} expression key to a K value.
+     * @param key @ key to be resolved.
+     * @return a value of the type specified with K.
+     */
     K resolve(String key);
 
+    /** Resolver to change any {@code String} value to null. */
     StringResolver<?> NULL = new StringResolver<Object>() {
         @Override
         public Object resolve(String key) {
@@ -16,6 +23,7 @@ public interface StringResolver<K> {
         }
     };
 
+    /** Identity function resolver. */
     StringResolver<String> STRING = new StringResolver<String>() {
         @Override
         public String resolve(String key) {
@@ -23,23 +31,29 @@ public interface StringResolver<K> {
         }
     };
 
+    /**
+     * Resolver to change {@code String} value to integer value.
+     */
     StringResolver<Integer> INTEGER = new StringResolver<Integer>() {
         @Override
         public Integer resolve(String key) {
             try {
                 return Integer.parseInt(key);
-            } catch (NumberFormatException nfe) {
+            } catch (NumberFormatException ignored) {
             }
             return 0;
         }
     };
 
+    /**
+     * Resolver to change {@code String} value to long value.
+     */
     StringResolver<Long> LONG = new StringResolver<Long>() {
         @Override
         public Long resolve(String key) {
             try {
                 return Long.parseLong(key);
-            } catch (NumberFormatException nfe) {
+            } catch (NumberFormatException ignored) {
             }
             return 0L;
         }
