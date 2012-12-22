@@ -75,7 +75,7 @@ public class ReservoirTest {
         assertThat((String) serializableCache.get(2), is("あいうえお"));
         assertThat(serializableCache.size(), is(3));
 
-        serializableCache.remove(0);
+        serializableCache.delete(0);
         assertThat(serializableCache.get(0), is(nullValue()));
         assertThat(serializableCache.containsKey(0), is(false));
         assertThat(serializableCache.size(), is(2));

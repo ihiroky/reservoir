@@ -76,17 +76,57 @@ public class BasicCacheTest {
         Map<Integer, Integer> map = new HashMap<Integer, Integer>();
         map.put(1, 11);
         map.put(2, 22);
-        basicCache.put(map);
+        basicCache.putAll(map);
         assertThat(basicCache.get(map.keySet()), is(map));
         assertThat(basicCache.size(), is(2));
 
         map.clear();
         map.put(2, 222);
         map.put(3, 333);
-        basicCache.put(map);
+        basicCache.putAll(map);
         map.put(1, 11);
         assertThat(basicCache.get(map.keySet()), is(map));
         assertThat(basicCache.size(), is(3));
+    }
+
+    @Test
+    public void testDelete() {
+        BasicCache<Integer, Integer> basicCache = createBasicCache(32, Integer.MAX_VALUE);
+
+        basicCache.delete(0);
+        assertThat(basicCache.size(), is(0));
+
+        basicCache.put(1, 11);
+        basicCache.put(2, 22);
+        basicCache.put(3, 33);
+        basicCache.delete(2);
+        assertThat(basicCache.get(2), is(nullValue()));
+        assertThat(basicCache.size(), is(2));
+
+        basicCache.delete(1);
+        assertThat(basicCache.get(1), is(nullValue()));
+        assertThat(basicCache.size(), is(1));
+    }
+
+    @Test
+    public void testDeleteMulti() {
+        BasicCache<Integer, Integer> basicCache = createBasicCache(32, Integer.MAX_VALUE);
+
+        basicCache.delete(new HashSet<Integer>(Arrays.asList(0, 1)));
+        assertThat(basicCache.size(), is(0));
+
+        basicCache.put(1, 11);
+        basicCache.put(2, 22);
+        basicCache.put(3, 33);
+        basicCache.put(4, 44);
+        basicCache.delete(new HashSet<Integer>(Arrays.asList(2)));
+        assertThat(basicCache.get(2), is(nullValue()));
+        assertThat(basicCache.size(), is(3));
+
+        basicCache.delete(new HashSet<Integer>(Arrays.asList(1, 4)));
+        assertThat(basicCache.get(1), is(nullValue()));
+        assertThat(basicCache.get(4), is(nullValue()));
+        assertThat(basicCache.size(), is(1));
     }
 
     @Test
@@ -99,11 +139,13 @@ public class BasicCacheTest {
         basicCache.put(1, 11);
         basicCache.put(2, 22);
         basicCache.put(3, 33);
-        basicCache.remove(2);
+        Integer ret = basicCache.remove(2);
+        assertThat(ret, is(22));
         assertThat(basicCache.get(2), is(nullValue()));
         assertThat(basicCache.size(), is(2));
 
-        basicCache.remove(1);
+        ret = basicCache.remove(1);
+        assertThat(ret, is(11));
         assertThat(basicCache.get(1), is(nullValue()));
         assertThat(basicCache.size(), is(1));
     }
@@ -119,55 +161,13 @@ public class BasicCacheTest {
         basicCache.put(2, 22);
         basicCache.put(3, 33);
         basicCache.put(4, 44);
-        basicCache.remove(new HashSet<Integer>(Arrays.asList(2)));
-        assertThat(basicCache.get(2), is(nullValue()));
-        assertThat(basicCache.size(), is(3));
-
-        basicCache.remove(new HashSet<Integer>(Arrays.asList(1, 4)));
-        assertThat(basicCache.get(1), is(nullValue()));
-        assertThat(basicCache.get(4), is(nullValue()));
-        assertThat(basicCache.size(), is(1));
-    }
-
-    @Test
-    public void testPoll() {
-        BasicCache<Integer, Integer> basicCache = createBasicCache(32, Integer.MAX_VALUE);
-
-        basicCache.remove(0);
-        assertThat(basicCache.size(), is(0));
-
-        basicCache.put(1, 11);
-        basicCache.put(2, 22);
-        basicCache.put(3, 33);
-        Integer ret = basicCache.poll(2);
-        assertThat(ret, is(22));
-        assertThat(basicCache.get(2), is(nullValue()));
-        assertThat(basicCache.size(), is(2));
-
-        ret = basicCache.poll(1);
-        assertThat(ret, is(11));
-        assertThat(basicCache.get(1), is(nullValue()));
-        assertThat(basicCache.size(), is(1));
-    }
-
-    @Test
-    public void testPollMulti() {
-        BasicCache<Integer, Integer> basicCache = createBasicCache(32, Integer.MAX_VALUE);
-
-        basicCache.remove(new HashSet<Integer>(Arrays.asList(0, 1)));
-        assertThat(basicCache.size(), is(0));
-
-        basicCache.put(1, 11);
-        basicCache.put(2, 22);
-        basicCache.put(3, 33);
-        basicCache.put(4, 44);
-        Map<Integer, Integer> ret = basicCache.poll(new HashSet<Integer>(Arrays.asList(2)));
+        Map<Integer, Integer> ret = basicCache.remove(new HashSet<Integer>(Arrays.asList(2)));
         assertThat(ret.get(2), is(22));
         assertThat(ret.size(), is(1));
         assertThat(basicCache.get(2), is(nullValue()));
         assertThat(basicCache.size(), is(3));
 
-        ret = basicCache.poll(new HashSet<Integer>(Arrays.asList(1, 4)));
+        ret = basicCache.remove(new HashSet<Integer>(Arrays.asList(1, 4)));
         assertThat(ret.get(1), is(11));
         assertThat(ret.get(4), is(44));
         assertThat(ret.size(), is(2));
@@ -244,7 +244,7 @@ public class BasicCacheTest {
         put0.put(2, 22);
         put0.put(3, 33);
         Set<Integer> remove0 = new HashSet<Integer>(Arrays.asList(1, 2));
-        basicCache.put(put0);
+        basicCache.putAll(put0);
         basicCache.remove(remove0);
         while (eventListener.argsList.size() != 5) {
             Thread.sleep(10);
@@ -277,7 +277,7 @@ public class BasicCacheTest {
         put1.put(3, 333);
         put1.put(4, 444);
         put1.put(5, 555);
-        basicCache.put(put1);
+        basicCache.putAll(put1);
         while (eventListener.argsList.size() != 7) {
             Thread.sleep(10);
         }

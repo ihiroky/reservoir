@@ -44,16 +44,58 @@ public interface Cache<K, V> extends CacheMBean, Iterable<Map.Entry<K, V>> {
      */
     void put(K key, V value);
 
-    void put(Map<K, V> keyValues);
+    /**
+     * Associates the specified values with the specified keys in this cache. If the cache previously contained
+     * mappings for the keys, the old values is replaced by the specified values.
+     *
+     * @param keyValues key-value entries to be associated in this cache.
+     */
+    void putAll(Map<K, V> keyValues);
 
-    void remove(K key);
+    /**
+     * Removes the mapping for a key from this cache if it is present. If this cache contains a mapping
+     * from key {@code k} to value {@code v} such that {@code key.equals(k)}, that mapping is removed.
+     * Returns the value to which this cache previously associated the key, or null if the map contained
+     * no mapping for the key.
+     *
+     * @param key key whose mapping is to be removed from this cache
+     * @return the previous value associated with key, or null if there was no mapping for key.
+     */
+    V remove(K key);
 
-    void remove(Collection<K> keys);
+    /**
+     * Removes the mapping for keys from this cache if they are present. If this cache contains mappings
+     * from keys {@code k} to values {@code v} such that {@code key.contains(k)}, those mappings are removed.
+     * Returns the mappings which this cache previously holds, or null if the map contained no mapping for the keys.
+     *
+     * @param keys keys whose mappings are to be removed from this cache
+     * @return the previous values associated with keys, or null if there was no mapping for keys.
+     */
+    Map<K, V> remove(Collection<K> keys);
 
-    V poll(K key);
+    /**
+     * Removes the mapping for a key from this cache if it is present. The method is different from {@link #remove(K)}
+     * in the point of not returning the previous value associated with the key.
+     *
+     * @param key key whose mapping is to be removed from this cache
+     */
+    void delete(K key);
 
-    Map<K, V> poll(Collection<K> keys);
+    /**
+     * Removes the mapping for keys from this cache if they are present. The method is different from
+     * {@link #remove(Collection)} in the point of not returning the previous mappings.
+     *
+     * @param keys key whose mappings are to be removed from this cache
+     */
+    void delete(Collection<K> keys);
 
+    /**
+     * Returns true if this cache contains a mapping for the specified key. Returns true if and only if this cache
+     * contains a mapping for a key {@code k} such that {@code key.equals(k)}.
+     *
+     * @param key key whose presence in this cache is tested
+     * @return true if this cache contains mapping for the specified key
+     */
     boolean containsKey(K key);
 
     /**

@@ -171,7 +171,7 @@ public abstract class JSONCoder<K, V> implements StreamingCoder<K, V> {
     @Override
     public void delete(String key, Cache<K, V> cache, OutputStream outputStream) throws Exception {
         K k = toKey(key);
-        write(k, cache.poll(k), outputStream);
+        write(k, cache.remove(k), outputStream);
     }
 
     @Override
@@ -198,7 +198,7 @@ public abstract class JSONCoder<K, V> implements StreamingCoder<K, V> {
                 if (KEY.equals(name)) {
                     parser.nextToken();
                     key = readKey(reader);
-                    cache.remove(key);
+                    cache.delete(key);
                 }
             }
         }

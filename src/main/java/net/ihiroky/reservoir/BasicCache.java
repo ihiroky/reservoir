@@ -87,19 +87,7 @@ public class BasicCache<K, V> extends AbstractCache<K, V> implements CacheMBean 
      * {@inheritDoc}
      */
     @Override
-    public void remove(K key) {
-        Ref<V> ref = index.remove(key);
-        cacheAccessor.remove(key, ref);
-    }
-
-    @Override
-    public void remove(Collection<K> keys) {
-        Collection<Map.Entry<K, Ref<V>>> refEntries = index.remove(keys);
-        cacheAccessor.remove(refEntries);
-    }
-
-    @Override
-    public V poll(K key) {
+    public V remove(K key) {
         Ref<V> ref = index.remove(key);
         if (ref == null) {
             return null;
@@ -109,8 +97,11 @@ public class BasicCache<K, V> extends AbstractCache<K, V> implements CacheMBean 
         return value;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
-    public Map<K, V> poll(Collection<K> keys) {
+    public Map<K, V> remove(Collection<K> keys) {
         Collection<Map.Entry<K, Ref<V>>> refEntries = index.remove(keys);
         Map<K, V> result = new HashMap<K, V>(refEntries.size());
         for (Map.Entry<K, Ref<V>> refEntry : refEntries) {
@@ -120,6 +111,30 @@ public class BasicCache<K, V> extends AbstractCache<K, V> implements CacheMBean 
         return result;
     }
 
+    /**
+     * {@inheritDoc}
+     */
+
+    @Override
+    public void delete(K key) {
+        Ref<V> ref = index.remove(key);
+        if (ref != null) {
+            cacheAccessor.remove(key, ref);
+        }
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public void delete(Collection<K> keys) {
+        Collection<Map.Entry<K, Ref<V>>> refEntries = index.remove(keys);
+        cacheAccessor.remove(refEntries);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public boolean containsKey(K key) {
         return index.contains(key);

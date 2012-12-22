@@ -53,6 +53,7 @@ abstract class AbstractBasicQueue<E, Q extends Queue<Ref<E>>> extends AbstractQu
      * unregistered.
      */
     public void dispose() {
+        refQueue.clear();
         cacheAccessor.dispose();
         MBeanSupport.unregisterMBean(this, name);
     }

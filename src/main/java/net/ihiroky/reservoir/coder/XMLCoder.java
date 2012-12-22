@@ -170,7 +170,7 @@ public abstract class XMLCoder<K, V> implements StreamingCoder<K, V> {
     @Override
     public void delete(String key, Cache<K, V> cache, OutputStream outputStream) throws Exception {
         K k = toKey(key);
-        write(k, cache.poll(k), outputStream);
+        write(k, cache.remove(k), outputStream);
     }
 
     @Override
@@ -200,7 +200,7 @@ public abstract class XMLCoder<K, V> implements StreamingCoder<K, V> {
                         continue LOOP;
                     }
                     if (key != null) {
-                        cache.remove(key);
+                        cache.delete(key);
                         key = null;
                     }
                 }

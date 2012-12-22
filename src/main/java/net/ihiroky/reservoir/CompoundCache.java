@@ -59,7 +59,7 @@ public final class CompoundCache<K, V> extends AbstractCache<K, V> implements Ca
         value = subCache.get(key);
         if (promoteOnGet && value != null) {
             mainCache.put(key, value);
-            subCache.remove(key);
+            subCache.delete(key);
         }
         return value;
     }
@@ -90,8 +90,8 @@ public final class CompoundCache<K, V> extends AbstractCache<K, V> implements Ca
         }
         Map<K, V> result = subCache.get(leftKeys);
         if (promoteOnGet && result.size() > 0) {
-            mainCache.put(result);
-            subCache.remove(leftKeys);
+            mainCache.putAll(result);
+            subCache.delete(leftKeys);
         }
         result.putAll(retrieved);
         return result;
@@ -103,37 +103,37 @@ public final class CompoundCache<K, V> extends AbstractCache<K, V> implements Ca
     }
 
     @Override
-    public void put(Map<K, V> keyValues) {
-        mainCache.put(keyValues);
+    public void putAll(Map<K, V> keyValues) {
+        mainCache.putAll(keyValues);
     }
 
     @Override
-    public void remove(K key) {
-        mainCache.remove(key);
-        subCache.remove(key);
-    }
-
-    @Override
-    public void remove(Collection<K> keySet) {
-        mainCache.remove(keySet);
-        subCache.remove(keySet);
-    }
-
-    @Override
-    public V poll(K key) {
-        V result = mainCache.poll(key);
+    public V remove(K key) {
+        V result = mainCache.remove(key);
         if (result == null) {
-            result = subCache.poll(key);
+            result = subCache.remove(key);
         }
         return result;
     }
 
     @Override
-    public Map<K, V> poll(Collection<K> keys) {
-        Map<K, V> result0 = mainCache.poll(keys);
-        Map<K, V> result1 = subCache.poll(keys);
+    public Map<K, V> remove(Collection<K> keys) {
+        Map<K, V> result0 = mainCache.remove(keys);
+        Map<K, V> result1 = subCache.remove(keys);
         result0.putAll(result1);
         return result0;
+    }
+
+    @Override
+    public void delete(K key) {
+        mainCache.delete(key);
+        subCache.delete(key);
+    }
+
+    @Override
+    public void delete(Collection<K> keys) {
+        mainCache.delete(keys);
+        subCache.delete(keys);
     }
 
     @Override

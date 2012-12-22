@@ -95,7 +95,7 @@ public class CompoundCacheTest {
         map.put(2, 12);
         map.put(3, 13);
         map.put(4, 14);
-        cache.put(map);
+        cache.putAll(map);
         assertThat(cache.size(), is(5));
         assertThat(main.size(), is(5));
         assertThat(sub.size(), is(0));
@@ -103,7 +103,7 @@ public class CompoundCacheTest {
         map.put(3, 23);
         map.put(4, 24);
         map.put(5, 25);
-        cache.put(map);
+        cache.putAll(map);
         Map<Integer, Integer> kv = cache.get(Arrays.asList(0, 1, 2, 3, 4, 5, -1));
         assertThat(kv.get(0), is(10));
         assertThat(kv.get(1), is(11));
@@ -213,7 +213,7 @@ public class CompoundCacheTest {
         kv.put(4, 14);
         kv.put(5, 15);
         kv.put(6, 16);
-        cache.put(kv);
+        cache.putAll(kv);
         while (main.size() != 5 || sub.size() != 2) {
             Thread.sleep(10);
         }
@@ -228,7 +228,7 @@ public class CompoundCacheTest {
     }
 
     @Test
-    public void testRemove() {
+    public void testDelete() {
         cache = new CompoundCache<Integer, Integer>("compound", main, sub);
 
         cache.put(0, 10);
@@ -238,9 +238,60 @@ public class CompoundCacheTest {
         cache.put(4, 14);
         cache.put(5, 15);
         cache.put(6, 16);
-        cache.remove(0);
+        cache.delete(0);
         assertThat(cache.get(0), is(nullValue()));
-        cache.remove(6);
+        cache.delete(6);
+        assertThat(cache.get(6), is(nullValue()));
+        assertThat(main.get(5), is(15));
+        assertThat(main.get(4), is(14));
+        assertThat(main.get(3), is(13));
+        assertThat(main.get(2), is(12));
+        assertThat(sub.get(1), is(11));
+        assertThat(cache.size(), is(5));
+    }
+
+    @Test
+    public void testDeleteMulti() {
+        cache = new CompoundCache<Integer, Integer>("compound", main, sub);
+
+        cache.put(0, 10);
+        cache.put(1, 11);
+        cache.put(2, 12);
+        cache.put(3, 13);
+        cache.put(4, 14);
+        cache.put(5, 15);
+        cache.put(6, 16);
+        Collection<Integer> keys = Arrays.asList(0, 6);
+        cache.delete(keys);
+        assertThat(cache.get(0), is(nullValue()));
+        assertThat(cache.get(6), is(nullValue()));
+        assertThat(main.get(5), is(15));
+        assertThat(main.get(4), is(14));
+        assertThat(main.get(3), is(13));
+        assertThat(main.get(2), is(12));
+        assertThat(sub.get(1), is(11));
+        assertThat(cache.size(), is(5));
+    }
+
+    @Test
+    public void testRemove() {
+        cache = new CompoundCache<Integer, Integer>("compound", main, sub);
+
+        Integer ret = cache.remove(-1);
+        assertThat(ret, is(nullValue()));
+
+        cache.put(0, 10);
+        cache.put(1, 11);
+        cache.put(2, 12);
+        cache.put(3, 13);
+        cache.put(4, 14);
+        cache.put(5, 15);
+        cache.put(6, 16);
+        ret = cache.remove(0);
+        assertThat(ret, is(10));
+        assertThat(cache.get(0), is(nullValue()));
+        ret = cache.remove(6);
+        assertThat(ret, is(16));
         assertThat(cache.get(6), is(nullValue()));
         assertThat(main.get(5), is(15));
         assertThat(main.get(4), is(14));
@@ -262,58 +313,7 @@ public class CompoundCacheTest {
         cache.put(5, 15);
         cache.put(6, 16);
         Collection<Integer> keys = Arrays.asList(0, 6);
-        cache.remove(keys);
-        assertThat(cache.get(0), is(nullValue()));
-        assertThat(cache.get(6), is(nullValue()));
-        assertThat(main.get(5), is(15));
-        assertThat(main.get(4), is(14));
-        assertThat(main.get(3), is(13));
-        assertThat(main.get(2), is(12));
-        assertThat(sub.get(1), is(11));
-        assertThat(cache.size(), is(5));
-    }
-
-    @Test
-    public void testPoll() {
-        cache = new CompoundCache<Integer, Integer>("compound", main, sub);
-
-        Integer ret = cache.poll(-1);
-        assertThat(ret, is(nullValue()));
-
-        cache.put(0, 10);
-        cache.put(1, 11);
-        cache.put(2, 12);
-        cache.put(3, 13);
-        cache.put(4, 14);
-        cache.put(5, 15);
-        cache.put(6, 16);
-        ret = cache.poll(0);
-        assertThat(ret, is(10));
-        assertThat(cache.get(0), is(nullValue()));
-        ret = cache.poll(6);
-        assertThat(ret, is(16));
-        assertThat(cache.get(6), is(nullValue()));
-        assertThat(main.get(5), is(15));
-        assertThat(main.get(4), is(14));
-        assertThat(main.get(3), is(13));
-        assertThat(main.get(2), is(12));
-        assertThat(sub.get(1), is(11));
-        assertThat(cache.size(), is(5));
-    }
-
-    @Test
-    public void testPollMulti() {
-        cache = new CompoundCache<Integer, Integer>("compound", main, sub);
-
-        cache.put(0, 10);
-        cache.put(1, 11);
-        cache.put(2, 12);
-        cache.put(3, 13);
-        cache.put(4, 14);
-        cache.put(5, 15);
-        cache.put(6, 16);
-        Collection<Integer> keys = Arrays.asList(0, 6);
-        Map<Integer, Integer> ret = cache.poll(keys);
+        Map<Integer, Integer> ret = cache.remove(keys);
         assertThat(ret.get(0), is(10));
         assertThat(ret.get(6), is(16));
         assertThat(ret.size(), is(2));

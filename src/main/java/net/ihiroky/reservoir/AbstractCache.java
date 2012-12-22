@@ -137,7 +137,7 @@ public abstract class AbstractCache<K, V> implements Cache<K, V> {
     public void removeEntry(String key) {
         K k = keyResolver.resolve(key);
         if (k != null) {
-            remove(k);
+            delete(k);
         }
     }
 
