@@ -35,18 +35,4 @@ public interface Coder<V> {
 
         ByteBuffer encode(V value);
     }
-
-    public class GZipEncoder<V> implements Encoder<V> {
-
-        private Encoder<V> encoder;
-
-        public GZipEncoder(Encoder<V> encoder) {
-            this.encoder = encoder;
-        }
-
-        @Override
-        public ByteBuffer encode(V value) {
-            return null;  //To change body of implemented methods use File | Settings | File Templates.
-        }
-    }
 }
