@@ -1,6 +1,6 @@
-package net.ihiroky.reservoir.accessor;
+package net.ihiroky.reservoir.storage;
 
-import net.ihiroky.reservoir.CacheAccessor;
+import net.ihiroky.reservoir.StorageAccessor;
 import net.ihiroky.reservoir.Index;
 import net.ihiroky.reservoir.PropertiesSupport;
 import net.ihiroky.reservoir.Ref;
@@ -27,24 +27,24 @@ import static org.junit.Assert.*;
  *
  * @author Hiroki Itoh
  */
-public class ByteBufferCacheAccessorTest {
+public class ByteBufferStorageAccessorTest {
 
-    AbstractBlockedByteCacheAccessor<Integer, String> byteBufferCacheAccessor;
+    AbstractBlockedByteStorageAccessor<Integer, String> byteBufferCacheAccessor;
     Index<Integer, Ref<String>> index;
     Properties props;
-    Set<CacheAccessor<?, ?>> disposeSet;
+    Set<StorageAccessor<?, ?>> disposeSet;
 
-    protected AbstractBlockedByteCacheAccessor<Integer, String> createInstance() {
-        return new ByteBufferCacheAccessor<Integer, String>();
+    protected AbstractBlockedByteStorageAccessor<Integer, String> createInstance() {
+        return new ByteBufferStorageAccessor<Integer, String>();
     }
 
     protected Properties createProperties() throws Exception {
         Properties props = new Properties();
-        props.setProperty("reservoir.ByteBufferCacheAccessor.direct", "false");
-        props.setProperty("reservoir.ByteBufferCacheAccessor.size", "64");
-        props.setProperty("reservoir.ByteBufferCacheAccessor.blockSize", "8");
-        props.setProperty("reservoir.ByteBufferCacheAccessor.partitions", "4");
-        props.setProperty("reservoir.ByteBufferCacheAccessor.coder", "net.ihiroky.reservoir.coder.StringCoder");
+        props.setProperty("reservoir.ByteBufferStorageAccessor.direct", "false");
+        props.setProperty("reservoir.ByteBufferStorageAccessor.size", "64");
+        props.setProperty("reservoir.ByteBufferStorageAccessor.blockSize", "8");
+        props.setProperty("reservoir.ByteBufferStorageAccessor.partitions", "4");
+        props.setProperty("reservoir.ByteBufferStorageAccessor.coder", "net.ihiroky.reservoir.coder.StringCoder");
         return props;
     }
 
@@ -54,13 +54,13 @@ public class ByteBufferCacheAccessorTest {
         index = new SimpleIndex<Integer, Ref<String>>();
         props = createProperties();
 
-        disposeSet = new HashSet<CacheAccessor<?, ?>>();
+        disposeSet = new HashSet<StorageAccessor<?, ?>>();
         disposeSet.add(byteBufferCacheAccessor);
     }
 
     @After
     public void after() {
-        for (CacheAccessor<?, ?> b : disposeSet) {
+        for (StorageAccessor<?, ?> b : disposeSet) {
             b.dispose();
         }
     }
@@ -68,21 +68,21 @@ public class ByteBufferCacheAccessorTest {
     @Test
     public void testPrepare() {
         Properties props2 = PropertiesSupport.builder()
-                .set(ByteBufferCacheAccessor.class, "blockSize", "8")
-                .set(ByteBufferCacheAccessor.class, "partition.1.direct", "true")
-                .set(ByteBufferCacheAccessor.class, "partition.1.capacity", "16")
-                .set(ByteBufferCacheAccessor.class, "partition.2.direct", "true")
-                .set(ByteBufferCacheAccessor.class, "partition.2.capacity", "16")
-                .set(ByteBufferCacheAccessor.class, "partition.3.direct", "true")
-                .set(ByteBufferCacheAccessor.class, "partition.3.capacity", "16")
-                .set(ByteBufferCacheAccessor.class, "partition.4.direct", "true")
-                .set(ByteBufferCacheAccessor.class, "partition.4.capacity", "16")
+                .set(ByteBufferStorageAccessor.class, "blockSize", "8")
+                .set(ByteBufferStorageAccessor.class, "partition.1.direct", "true")
+                .set(ByteBufferStorageAccessor.class, "partition.1.capacity", "16")
+                .set(ByteBufferStorageAccessor.class, "partition.2.direct", "true")
+                .set(ByteBufferStorageAccessor.class, "partition.2.capacity", "16")
+                .set(ByteBufferStorageAccessor.class, "partition.3.direct", "true")
+                .set(ByteBufferStorageAccessor.class, "partition.3.capacity", "16")
+                .set(ByteBufferStorageAccessor.class, "partition.4.direct", "true")
+                .set(ByteBufferStorageAccessor.class, "partition.4.capacity", "16")
                 .build();
 
-        ByteBufferCacheAccessor<Integer, String> instance = new ByteBufferCacheAccessor<Integer, String>();
+        ByteBufferStorageAccessor<Integer, String> instance = new ByteBufferStorageAccessor<Integer, String>();
         try {
-            byteBufferCacheAccessor.prepare("ByteBufferCacheAccessorTest#testPrepare", this.props);
-            instance.prepare("ByteBufferCacheAccessorTest#testPrepare2", props2);
+            byteBufferCacheAccessor.prepare("ByteBufferStorageAccessorTest#testPrepare", this.props);
+            instance.prepare("ByteBufferStorageAccessorTest#testPrepare2", props2);
             assertThat(instance.getPartitions(), is(byteBufferCacheAccessor.getPartitions()));
             assertThat(instance.getWholeBlocks(), is(byteBufferCacheAccessor.getWholeBlocks()));
         } finally {
@@ -93,15 +93,15 @@ public class ByteBufferCacheAccessorTest {
     @Test
     public void testPrepareUsagePercent() {
         Properties props2 = PropertiesSupport.builder()
-                .set(ByteBufferCacheAccessor.class, "direct", "true")
-                .set(ByteBufferCacheAccessor.class, "usagePercent", "10")
-                .set(ByteBufferCacheAccessor.class, "blockSize", "256")
-                .set(ByteBufferCacheAccessor.class, "partitions", "1")
+                .set(ByteBufferStorageAccessor.class, "direct", "true")
+                .set(ByteBufferStorageAccessor.class, "usagePercent", "10")
+                .set(ByteBufferStorageAccessor.class, "blockSize", "256")
+                .set(ByteBufferStorageAccessor.class, "partitions", "1")
                 .build();
 
-        ByteBufferCacheAccessor<Integer, String> instance = new ByteBufferCacheAccessor<Integer, String>();
+        ByteBufferStorageAccessor<Integer, String> instance = new ByteBufferStorageAccessor<Integer, String>();
         disposeSet.add(instance);
-        instance.prepare("ByteBufferCacheAccessorTest#testPrepareUsagePercent", props2);
+        instance.prepare("ByteBufferStorageAccessorTest#testPrepareUsagePercent", props2);
         assertThat(instance.getWholeBlocks(), is(Reservoir.getMaxDirectMemorySize() / 256 / 10));
         assertThat(instance.getBlockSize(), is(256));
         assertThat(instance.getPartitions(), is(1));
@@ -109,7 +109,7 @@ public class ByteBufferCacheAccessorTest {
 
     @Test
     public void testUpdate() {
-        byteBufferCacheAccessor.prepare(ByteBufferCacheAccessor.class + "#testUpdate", props);
+        byteBufferCacheAccessor.prepare(ByteBufferStorageAccessor.class + "#testUpdate", props);
 
         byteBufferCacheAccessor.update(0, "01234567890123456789", index);
         assertThat(index.get(0).value(), is("01234567890123456789"));
@@ -127,7 +127,7 @@ public class ByteBufferCacheAccessorTest {
 
     @Test
     public void testUpdateMulti() {
-        byteBufferCacheAccessor.prepare(ByteBufferCacheAccessorTest.class + "#testUpdateMulti", props);
+        byteBufferCacheAccessor.prepare(ByteBufferStorageAccessorTest.class + "#testUpdateMulti", props);
 
         Map<Integer, String> map = new HashMap<Integer, String>();
         map.put(0, "hoge");
@@ -149,7 +149,7 @@ public class ByteBufferCacheAccessorTest {
 
     @Test
     public void testRemove() {
-        byteBufferCacheAccessor.prepare(ByteBufferCacheAccessor.class + "#testRemove", props);
+        byteBufferCacheAccessor.prepare(ByteBufferStorageAccessor.class + "#testRemove", props);
 
         Map<Integer, String> map = new HashMap<Integer, String>();
         map.put(0, "hoge");
@@ -168,7 +168,7 @@ public class ByteBufferCacheAccessorTest {
 
     @Test
     public void testRemoveMulti() {
-        byteBufferCacheAccessor.prepare(ByteBufferCacheAccessorTest.class + "#testRemoveMulti", props);
+        byteBufferCacheAccessor.prepare(ByteBufferStorageAccessorTest.class + "#testRemoveMulti", props);
 
         Map<Integer, String> map = new HashMap<Integer, String>();
         map.put(0, "hoge");
@@ -185,7 +185,7 @@ public class ByteBufferCacheAccessorTest {
         props.setProperty(
                 PropertiesSupport.key(byteBufferCacheAccessor.getClass(), "rejectedAllocationHandler"),
                 "WAIT_FOR_FREE_BLOCK");
-        byteBufferCacheAccessor.prepare(ByteBufferCacheAccessorTest.class + "#testWaitForFreeBlock", props);
+        byteBufferCacheAccessor.prepare(ByteBufferStorageAccessorTest.class + "#testWaitForFreeBlock", props);
         final List<Ref<String>> refList = new ArrayList<Ref<String>>();
         final int stopTime = 100;
         for (int i = 0; i < 4; i++) {

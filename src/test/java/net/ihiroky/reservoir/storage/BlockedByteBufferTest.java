@@ -1,4 +1,4 @@
-package net.ihiroky.reservoir.accessor;
+package net.ihiroky.reservoir.storage;
 
 import org.junit.After;
 import org.junit.Before;

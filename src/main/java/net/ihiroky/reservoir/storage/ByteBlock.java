@@ -1,4 +1,4 @@
-package net.ihiroky.reservoir.accessor;
+package net.ihiroky.reservoir.storage;
 
 /**
  * Created on 12/10/31, 12:04

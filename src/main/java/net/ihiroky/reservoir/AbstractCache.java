@@ -7,9 +7,9 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.regex.Pattern;
 
 /**
- * A cache (key-value store) that stores values in a space prepared by {@link CacheAccessor}. The key is held in
- * Java heap. The reference of the element store is held by {@link net.ihiroky.reservoir.Cache}, which defines the
- * cache algorithm.
+ * A cache (key-value store) that stores values in a space prepared by {@link net.ihiroky.reservoir.StorageAccessor}.
+ * The key is held in Java heap. The reference of the element store is held by {@link net.ihiroky.reservoir.Cache},
+ * which defines the cache algorithm.
  *
  * TODO bytes direct get/put
  *

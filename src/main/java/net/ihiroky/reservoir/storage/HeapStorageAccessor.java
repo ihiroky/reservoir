@@ -1,6 +1,6 @@
-package net.ihiroky.reservoir.accessor;
+package net.ihiroky.reservoir.storage;
 
-import net.ihiroky.reservoir.CacheAccessor;
+import net.ihiroky.reservoir.StorageAccessor;
 import net.ihiroky.reservoir.Index;
 import net.ihiroky.reservoir.Ref;
 
@@ -13,7 +13,7 @@ import java.util.Properties;
  *
  * @author Hiroki Itoh
  */
-public class HeapCacheAccessor<K, V> implements CacheAccessor<K, V> {
+public class HeapStorageAccessor<K, V> implements StorageAccessor<K, V> {
 
     static class HeapRef<V> implements Ref<V> {
 

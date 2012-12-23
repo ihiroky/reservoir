@@ -1,4 +1,4 @@
-package net.ihiroky.reservoir.accessor;
+package net.ihiroky.reservoir.storage;
 
 import net.ihiroky.reservoir.Coder;
 import net.ihiroky.reservoir.PropertiesSupport;
@@ -21,9 +21,9 @@ import java.util.TreeMap;
  *
  * @author Hiroki Itoh
  */
-public class FileCacheAccessor<K, V> extends AbstractBlockedByteCacheAccessor<K, V> {
+public class FileStorageAccessor<K, V> extends AbstractBlockedByteStorageAccessor<K, V> {
 
-    private Logger logger = LoggerFactory.getLogger(FileCacheAccessor.class);
+    private Logger logger = LoggerFactory.getLogger(FileStorageAccessor.class);
 
     private static final String KEY_PREFIX = "reservoir.";
     private static final String KEY_BLOCK_SIZE_SUFFIX = ".blockSize";

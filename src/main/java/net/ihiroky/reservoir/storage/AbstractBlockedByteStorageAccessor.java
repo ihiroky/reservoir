@@ -1,6 +1,6 @@
-package net.ihiroky.reservoir.accessor;
+package net.ihiroky.reservoir.storage;
 
-import net.ihiroky.reservoir.CacheAccessor;
+import net.ihiroky.reservoir.StorageAccessor;
 import net.ihiroky.reservoir.Coder;
 import net.ihiroky.reservoir.Index;
 import net.ihiroky.reservoir.MBeanSupport;
@@ -23,8 +23,8 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
  *
  * @author Hiroki Itoh
  */
-public abstract class AbstractBlockedByteCacheAccessor<K, V>
-        implements CacheAccessor<K, V>, BlockedByteCacheAccessorMBean {
+public abstract class AbstractBlockedByteStorageAccessor<K, V>
+        implements StorageAccessor<K, V>, BlockedByteCacheAccessorMBean {
 
     private String name;
     private volatile ByteBlockManager[] byteBlockManagers;
@@ -36,7 +36,7 @@ public abstract class AbstractBlockedByteCacheAccessor<K, V>
     private RejectedAllocationHandler rejectedAllocationHandler = RejectedAllocationPolicy.ABORT;
     private final Object freeWaitMutex = new Object();
 
-    private Logger logger = LoggerFactory.getLogger(AbstractBlockedByteCacheAccessor.class);
+    private Logger logger = LoggerFactory.getLogger(AbstractBlockedByteStorageAccessor.class);
 
     private static final ByteBuffer EMPTY_BUFFER = ByteBuffer.allocate(0); // automatically readonly.
     private static final List<ByteBlock> EMPTY_LIST = Collections.emptyList();

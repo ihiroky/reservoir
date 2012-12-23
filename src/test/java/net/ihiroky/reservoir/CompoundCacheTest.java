@@ -38,11 +38,11 @@ public class CompoundCacheTest {
         sub = Reservoir.newCacheBuilder().name("sub")
                 .indexType(Reservoir.IndexType.LRU)
                 .cacheAccessorType(Reservoir.CacheAccessorType.BYTE_BUFFER)
-                .property("reservoir.ByteBufferCacheAccessor.direct", "true")
-                .property("reservoir.ByteBufferCacheAccessor.size", "8192")
-                .property("reservoir.ByteBufferCacheAccessor.blockSize", "256")
-                .property("reservoir.ByteBufferCacheAccessor.partitions", "8")
-                .property("reservoir.ByteBufferCacheAccessor.coder", "net.ihiroky.reservoir.coder.SerializableCoder")
+                .property("reservoir.ByteBufferStorageAccessor.direct", "true")
+                .property("reservoir.ByteBufferStorageAccessor.size", "8192")
+                .property("reservoir.ByteBufferStorageAccessor.blockSize", "256")
+                .property("reservoir.ByteBufferStorageAccessor.partitions", "8")
+                .property("reservoir.ByteBufferStorageAccessor.coder", "net.ihiroky.reservoir.coder.SerializableCoder")
                 .build();
         cache = null;
     }

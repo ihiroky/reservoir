@@ -1,19 +1,19 @@
-package net.ihiroky.reservoir.accessor;
+package net.ihiroky.reservoir.storage;
 
 /**
  * @author Hiroki Itoh
  */
 public interface RejectedAllocationHandler {
-    boolean handle(AbstractBlockedByteCacheAccessor<?, ?> accessor) throws InterruptedException;
+    boolean handle(AbstractBlockedByteStorageAccessor<?, ?> accessor) throws InterruptedException;
 
     abstract class AllocateByteBlockManager implements RejectedAllocationHandler {
         @Override
-        public boolean handle(AbstractBlockedByteCacheAccessor<?, ?> accessor) throws InterruptedException {
+        public boolean handle(AbstractBlockedByteStorageAccessor<?, ?> accessor) throws InterruptedException {
             ByteBlockManager byteBlockManager = createByteBlockManager(accessor);
             accessor.addByteBlockManager(byteBlockManager);
             return true;
         }
 
-        public abstract ByteBlockManager createByteBlockManager(AbstractBlockedByteCacheAccessor<?, ?> accessor);
+        public abstract ByteBlockManager createByteBlockManager(AbstractBlockedByteStorageAccessor<?, ?> accessor);
     }
 }

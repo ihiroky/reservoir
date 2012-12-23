@@ -1,4 +1,4 @@
-package net.ihiroky.reservoir.accessor;
+package net.ihiroky.reservoir.storage;
 
 import java.nio.ByteBuffer;
 import java.util.LinkedList;

@@ -1,6 +1,6 @@
 package net.ihiroky.reservoir;
 
-import net.ihiroky.reservoir.accessor.ByteBufferCacheAccessor;
+import net.ihiroky.reservoir.storage.ByteBufferStorageAccessor;
 import org.junit.Test;
 
 import java.nio.ByteBuffer;
@@ -21,11 +21,11 @@ public class BasicQueuePerfTest {
         final BasicQueue<Integer> queue = Reservoir.newQueueBuilder()
                 .name("BasicQueueTest#testMultiThread")
                 .cacheAccessorType(Reservoir.CacheAccessorType.BYTE_BUFFER)
-                .property(ByteBufferCacheAccessor.class, "direct", "true")
-                .property(ByteBufferCacheAccessor.class, "blockSize", "8")
-                .property(ByteBufferCacheAccessor.class, "partitions", "2")
-                .property(ByteBufferCacheAccessor.class, "size", "8192")
-                .property(ByteBufferCacheAccessor.class, "coder", this.getClass().getName() + "$IntegerCoder")
+                .property(ByteBufferStorageAccessor.class, "direct", "true")
+                .property(ByteBufferStorageAccessor.class, "blockSize", "8")
+                .property(ByteBufferStorageAccessor.class, "partitions", "2")
+                .property(ByteBufferStorageAccessor.class, "size", "8192")
+                .property(ByteBufferStorageAccessor.class, "coder", this.getClass().getName() + "$IntegerCoder")
                 .build();
         final int END = 100000;
         Runnable put = new Runnable() {

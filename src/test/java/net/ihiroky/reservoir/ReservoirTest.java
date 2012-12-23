@@ -1,10 +1,10 @@
 package net.ihiroky.reservoir;
 
-import net.ihiroky.reservoir.accessor.ByteBufferCacheAccessor;
-import net.ihiroky.reservoir.accessor.FileCacheAccessor;
-import net.ihiroky.reservoir.accessor.FileInfo;
-import net.ihiroky.reservoir.accessor.RejectedAllocationHandler;
-import net.ihiroky.reservoir.accessor.RejectedAllocationPolicy;
+import net.ihiroky.reservoir.storage.ByteBufferStorageAccessor;
+import net.ihiroky.reservoir.storage.FileStorageAccessor;
+import net.ihiroky.reservoir.storage.FileInfo;
+import net.ihiroky.reservoir.storage.RejectedAllocationHandler;
+import net.ihiroky.reservoir.storage.RejectedAllocationPolicy;
 import net.ihiroky.reservoir.coder.ByteArrayCoder;
 import net.ihiroky.reservoir.coder.SerializableCoder;
 import org.junit.After;
@@ -33,7 +33,7 @@ public class ReservoirTest {
 
     List<Cache<?, ?>> disposeList;
     List<BasicQueue<?>> disposeQueueList;
-    List<CacheAccessor<?, ?>> disposeCacheAccessorList;
+    List<StorageAccessor<?, ?>> disposeStorageAccessorList;
 
     static final int DEFAULT_MAX_DIRECT_MEMORY_SIZE = 64 * 1024 * 1024;
 
@@ -44,7 +44,7 @@ public class ReservoirTest {
     public void before() {
         disposeList = new ArrayList<Cache<?, ?>>();
         disposeQueueList = new ArrayList<BasicQueue<?>>();
-        disposeCacheAccessorList = new ArrayList<CacheAccessor<?, ?>>();
+        disposeStorageAccessorList = new ArrayList<StorageAccessor<?, ?>>();
     }
 
     @After
@@ -55,7 +55,7 @@ public class ReservoirTest {
         for (BasicQueue<?> queue : disposeQueueList) {
             queue.dispose();
         }
-        for (CacheAccessor<?, ?> ca : disposeCacheAccessorList) {
+        for (StorageAccessor<?, ?> ca : disposeStorageAccessorList) {
             ca.dispose();
         }
     }
@@ -85,10 +85,10 @@ public class ReservoirTest {
     public void testCreateQueue() throws Exception {
         BasicQueue<byte[]> queue = Reservoir.newQueueBuilder()
                 .cacheAccessorType(Reservoir.CacheAccessorType.BYTE_BUFFER)
-                .property("reservoir.ByteBufferCacheAccessor.direct", "true")
-                .property("reservoir.ByteBufferCacheAccessor.size", "8192")
-                .property("reservoir.ByteBufferCacheAccessor.blockSize", "256")
-                .property("reservoir.ByteBufferCacheAccessor.coder", "net.ihiroky.reservoir.coder.ByteArrayCoder")
+                .property("reservoir.ByteBufferStorageAccessor.direct", "true")
+                .property("reservoir.ByteBufferStorageAccessor.size", "8192")
+                .property("reservoir.ByteBufferStorageAccessor.blockSize", "256")
+                .property("reservoir.ByteBufferStorageAccessor.coder", "net.ihiroky.reservoir.coder.ByteArrayCoder")
                 .property("reservoir.ByteArrayCoder.compress.enabled", "true")
                 .build();
         disposeQueueList.add(queue);
@@ -119,13 +119,13 @@ public class ReservoirTest {
         final Class<?> coderClass = ByteArrayCoder.class;
         final RejectedAllocationHandler rah = RejectedAllocationPolicy.WAIT_FOR_FREE_BLOCK;
 
-        CacheAccessor<Object, byte[]> ca = Reservoir.newByteBufferCacheAccessorBuilder()
+        StorageAccessor<Object, byte[]> ca = Reservoir.newByteBufferCacheAccessorBuilder()
                 .direct(direct).usagePercent(usagePercent).blockSize(blockSize).partitionsHint(partitionsHint)
                 .coderClass(coderClass).rejectedAllocationHandler(rah)
                 .build(ReservoirTest.class.getName() + "#testByteBufferCacheAssessorBuilder");
-        disposeCacheAccessorList.add(ca);
+        disposeStorageAccessorList.add(ca);
 
-        ByteBufferCacheAccessor<Object, byte[]> bbca = (ByteBufferCacheAccessor<Object, byte[]>) ca;
+        ByteBufferStorageAccessor<Object, byte[]> bbca = (ByteBufferStorageAccessor<Object, byte[]>) ca;
 
         assertThat(bbca.getWholeBlocks(), is(DEFAULT_MAX_DIRECT_MEMORY_SIZE / 256L / usagePercent));
         assertThat(bbca.getPartitions(), is(partitionsHint));
@@ -137,12 +137,12 @@ public class ReservoirTest {
 
     @Test
     public void testByteBufferCacheAccessorBuilderWithByteBufferInfo() {
-        CacheAccessor<Object, byte[]> ca = Reservoir.newByteBufferCacheAccessorBuilder()
+        StorageAccessor<Object, byte[]> ca = Reservoir.newByteBufferCacheAccessorBuilder()
                 .blockSize(128).byteBufferInfo(true, 256).byteBufferInfo(true, 256)
                 .build(ReservoirTest.class.getName() + "#testByteBufferCacheAccessorBuilderWithByteBufferInfo");
-        disposeCacheAccessorList.add(ca);
+        disposeStorageAccessorList.add(ca);
 
-        ByteBufferCacheAccessor<Object, byte[]> bbca = (ByteBufferCacheAccessor<Object, byte[]>)ca;
+        ByteBufferStorageAccessor<Object, byte[]> bbca = (ByteBufferStorageAccessor<Object, byte[]>)ca;
         assertThat(bbca.getWholeBlocks(), is(4L));
         assertThat(bbca.getBlockSize(), is(128));
         assertThat(bbca.getPartitions(), is(2));
@@ -151,11 +151,11 @@ public class ReservoirTest {
     @Test
     public void testByteBufferCacheAccessorBuilderDefault() {
 
-        CacheAccessor<Object, byte[]> ca = Reservoir.newByteBufferCacheAccessorBuilder()
+        StorageAccessor<Object, byte[]> ca = Reservoir.newByteBufferCacheAccessorBuilder()
                 .build(ReservoirTest.class.getName() + "#testByteBufferCacheAssessorBuilderDefault");
-        disposeCacheAccessorList.add(ca);
+        disposeStorageAccessorList.add(ca);
 
-        ByteBufferCacheAccessor<Object, byte[]> bbca = (ByteBufferCacheAccessor<Object, byte[]>) ca;
+        ByteBufferStorageAccessor<Object, byte[]> bbca = (ByteBufferStorageAccessor<Object, byte[]>) ca;
         assertThat(bbca.getWholeBlocks(), is(DEFAULT_MAX_DIRECT_MEMORY_SIZE / 512L / 10 * 9 + 1)); // 1 : fraction
         assertThat(bbca.getPartitions(), is(1));
         assertThat(bbca.getBlockSize(), is(512));
@@ -179,14 +179,14 @@ public class ReservoirTest {
     @Test
     public void testFileCacheAccessorBuilder() throws Exception {
         File directory = folder.newFolder();
-        CacheAccessor<Object, byte[]> ca = Reservoir.newFileCacheAccessorBuilder()
+        StorageAccessor<Object, byte[]> ca = Reservoir.newFileCacheAccessorBuilder()
                 .totalSize(DEFAULT_MAX_DIRECT_MEMORY_SIZE).blockSize(256).partitionsHint(4)
                 .directory(directory).mode(FileInfo.Mode.READ_WRITE).coderClass(ByteArrayCoder.class)
                 .rejectedAllocationHandler(RejectedAllocationPolicy.WAIT_FOR_FREE_BLOCK)
                 .build(ReservoirTest.class.getName() + "#testFileCacheAccessorBuilder");
-        disposeCacheAccessorList.add(ca);
+        disposeStorageAccessorList.add(ca);
 
-        FileCacheAccessor<Object, byte[]> fca = (FileCacheAccessor<Object, byte[]>) ca;
+        FileStorageAccessor<Object, byte[]> fca = (FileStorageAccessor<Object, byte[]>) ca;
         try {
             assertThat(fca.getWholeBlocks(), is(DEFAULT_MAX_DIRECT_MEMORY_SIZE / 256L));
             assertThat(fca.getPartitions(), is(4));
@@ -210,13 +210,13 @@ public class ReservoirTest {
     public void testFileCacheAccessorBuilderWithFileInfo() throws IOException {
         File file0 = folder.newFile();
         File file1 = folder.newFile();
-        CacheAccessor<Object, byte[]> ca = Reservoir.newFileCacheAccessorBuilder().blockSize(128)
+        StorageAccessor<Object, byte[]> ca = Reservoir.newFileCacheAccessorBuilder().blockSize(128)
                 .fileInfo(file0.getPath(), 256, FileInfo.Mode.READ_WRITE)
                 .fileInfo(file1.getPath(), 256, FileInfo.Mode.READ_WRITE)
                 .build(ReservoirTest.class.getName() + "#testByteBufferCacheAccessorBuilderWithFileInfo");
-        disposeCacheAccessorList.add(ca);
+        disposeStorageAccessorList.add(ca);
 
-        FileCacheAccessor<Object, byte[]> fca = (FileCacheAccessor<Object, byte[]>)ca;
+        FileStorageAccessor<Object, byte[]> fca = (FileStorageAccessor<Object, byte[]>)ca;
         assertThat(fca.getWholeBlocks(), is(4L));
         assertThat(fca.getBlockSize(), is(128));
         assertThat(fca.getPartitions(), is(2));
@@ -225,15 +225,15 @@ public class ReservoirTest {
     @Test
     public void testFileCacheAccessorBuilderDefault() throws Exception {
 
-        CacheAccessor<Object, byte[]> ca = Reservoir.newFileCacheAccessorBuilder()
+        StorageAccessor<Object, byte[]> ca = Reservoir.newFileCacheAccessorBuilder()
                 .build(ReservoirTest.class.getName() + "#testFileCacheAccessorBuilderDefault");
-        disposeCacheAccessorList.add(ca);
+        disposeStorageAccessorList.add(ca);
 
-        FileCacheAccessor<Object, byte[]> fca = (FileCacheAccessor<Object, byte[]>) ca;
+        FileStorageAccessor<Object, byte[]> fca = (FileStorageAccessor<Object, byte[]>) ca;
         FilenameFilter filenameFilter = new FilenameFilter() {
             @Override
             public boolean accept(File dir, String name) {
-                return name.contains("BuilderDefault"); // part of CacheAccessor name
+                return name.contains("BuilderDefault"); // part of StorageAccessor name
             }
         };
         try {
@@ -257,20 +257,20 @@ public class ReservoirTest {
     }
 
     // Skip testMemoryFileCacheAccessorBuilder(). the same as testFileCacheAccessorBuilder() except of
-    // FileCacheAccessor#createInstance(). This method is test on testMemoryMappedFileCacheAccessorBuilderDefault().
+    // FileStorageAccessor#createInstance(). This method is test on testMemoryMappedFileCacheAccessorBuilderDefault().
 
     @Test
     public void testMemoryMappedFileCacheAccessorBuilderDefault() throws Exception {
 
-        CacheAccessor<Object, byte[]> ca = Reservoir.newMemoryMappedFileCacheAccessorBuilder()
+        StorageAccessor<Object, byte[]> ca = Reservoir.newMemoryMappedFileCacheAccessorBuilder()
                 .build(ReservoirTest.class.getName() + "#testMemofyMappedFileCacheAccessorBuilderDefault");
-        disposeCacheAccessorList.add(ca);
+        disposeStorageAccessorList.add(ca);
 
-        FileCacheAccessor<Object, byte[]> fca = (FileCacheAccessor<Object, byte[]>) ca;
+        FileStorageAccessor<Object, byte[]> fca = (FileStorageAccessor<Object, byte[]>) ca;
         FilenameFilter filenameFilter = new FilenameFilter() {
             @Override
             public boolean accept(File dir, String name) {
-                return name.contains("BuilderDefault"); // part of CacheAccessor name
+                return name.contains("BuilderDefault"); // part of StorageAccessor name
             }
         };
         try {

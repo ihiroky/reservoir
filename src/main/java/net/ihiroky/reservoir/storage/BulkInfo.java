@@ -1,4 +1,4 @@
-package net.ihiroky.reservoir.accessor;
+package net.ihiroky.reservoir.storage;
 
 /**
  * @author Hiroki Itoh

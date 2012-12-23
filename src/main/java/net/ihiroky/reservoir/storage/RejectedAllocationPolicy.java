@@ -1,4 +1,4 @@
-package net.ihiroky.reservoir.accessor;
+package net.ihiroky.reservoir.storage;
 
 /**
 * @author Hiroki Itoh
@@ -6,14 +6,14 @@ package net.ihiroky.reservoir.accessor;
 public enum RejectedAllocationPolicy implements RejectedAllocationHandler {
     WAIT_FOR_FREE_BLOCK {
         @Override
-        public boolean handle(AbstractBlockedByteCacheAccessor accessor) throws InterruptedException {
+        public boolean handle(AbstractBlockedByteStorageAccessor accessor) throws InterruptedException {
             accessor.waitOnFreeWaitMutex();
             return true;
         }
     },
     ABORT {
         @Override
-        public boolean handle(AbstractBlockedByteCacheAccessor accessor) throws InterruptedException {
+        public boolean handle(AbstractBlockedByteStorageAccessor accessor) throws InterruptedException {
             return false;
         }
     },

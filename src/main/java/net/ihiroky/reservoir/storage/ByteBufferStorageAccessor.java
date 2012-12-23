@@ -1,4 +1,4 @@
-package net.ihiroky.reservoir.accessor;
+package net.ihiroky.reservoir.storage;
 
 import net.ihiroky.reservoir.Coder;
 import net.ihiroky.reservoir.PropertiesSupport;
@@ -18,16 +18,16 @@ import java.util.TreeMap;
  *
  * @author Hiroki Itoh
  */
-public class ByteBufferCacheAccessor<K, V> extends AbstractBlockedByteCacheAccessor<K, V> {
+public class ByteBufferStorageAccessor<K, V> extends AbstractBlockedByteStorageAccessor<K, V> {
 
-    private static final String KEY_DIRECT = "reservoir.ByteBufferCacheAccessor.direct";
-    private static final String KEY_SIZE = "reservoir.ByteBufferCacheAccessor.size";
-    private static final String KEY_USAGE_PERCENT = "reservoir.ByteBufferCacheAccessor.usagePercent";
-    private static final String KEY_BLOCK_SIZE = "reservoir.ByteBufferCacheAccessor.blockSize";
-    private static final String KEY_PARTITIONS = "reservoir.ByteBufferCacheAccessor.partitions";
-    private static final String KEY_CODER = "reservoir.ByteBufferCacheAccessor.coder";
+    private static final String KEY_DIRECT = "reservoir.ByteBufferStorageAccessor.direct";
+    private static final String KEY_SIZE = "reservoir.ByteBufferStorageAccessor.size";
+    private static final String KEY_USAGE_PERCENT = "reservoir.ByteBufferStorageAccessor.usagePercent";
+    private static final String KEY_BLOCK_SIZE = "reservoir.ByteBufferStorageAccessor.blockSize";
+    private static final String KEY_PARTITIONS = "reservoir.ByteBufferStorageAccessor.partitions";
+    private static final String KEY_CODER = "reservoir.ByteBufferStorageAccessor.coder";
     private static final String KEY_REJECTED_ALLOCATION_HANDLER =
-            "reservoir.ByteBufferCacheAccessor.rejectedAllocationHandler";
+            "reservoir.ByteBufferStorageAccessor.rejectedAllocationHandler";
 
     private static final String KEY_PARTITION_PREFIX = "partition.";
     private static final String KEY_DIRECT_SUFFIX = ".direct";
@@ -116,7 +116,7 @@ public class ByteBufferCacheAccessor<K, V> extends AbstractBlockedByteCacheAcces
     }
 
     private Collection<ByteBufferInfo> parseByteBufferInfo(Properties props) {
-        String byPartitionPrefix = PropertiesSupport.key(ByteBufferCacheAccessor.class, KEY_PARTITION_PREFIX);
+        String byPartitionPrefix = PropertiesSupport.key(ByteBufferStorageAccessor.class, KEY_PARTITION_PREFIX);
         Map<Integer, ByteBufferInfo> infoMap = new TreeMap<Integer, ByteBufferInfo>();
         for (String key : props.stringPropertyNames()) {
             if (!key.startsWith(byPartitionPrefix)) {

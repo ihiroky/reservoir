@@ -13,9 +13,9 @@ public class BasicQueue<E> extends AbstractBasicQueue<E, ConcurrentLinkedQueue<R
     /**
      * Constructs this object.
      * @param name a name of this queue.
-     * @param cacheAccessor  a manager that allocates and releases elements store.
+     * @param storageAccessor  a manager that allocates and releases elements store.
      */
-    BasicQueue(String name, CacheAccessor<Object, E> cacheAccessor) {
-        super(name, cacheAccessor, new ConcurrentLinkedQueue<Ref<E>>());
+    BasicQueue(String name, StorageAccessor<Object, E> storageAccessor) {
+        super(name, storageAccessor, new ConcurrentLinkedQueue<Ref<E>>());
     }
 }

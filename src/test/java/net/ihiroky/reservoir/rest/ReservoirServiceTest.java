@@ -262,7 +262,7 @@ public class ReservoirServiceTest {
         assertThat(header.get("X-CACHE-NAME"), is((Object) Arrays.asList(KEY_CACHE_NAME)));
         assertThat(header.get("X-CACHE-SIZE"), is((Object) Arrays.asList(4)));
         assertThat(header.get("X-CACHE-INDEX"), is((Object) Arrays.asList("net.ihiroky.reservoir.index.ConcurrentLRUIndex")));
-        assertThat(header.get("X-CACHE-ACCESSOR"), is((Object) Arrays.asList("net.ihiroky.reservoir.accessor.HeapCacheAccessor")));
+        assertThat(header.get("X-CACHE-ACCESSOR"), is((Object) Arrays.asList("net.ihiroky.reservoir.storage.HeapStorageAccessor")));
         assertThat(header.get("X-CACHE-KEY-RESOLVER"), is((Object) Arrays.asList("net.ihiroky.reservoir.StringResolver$3")));
         assertThat(header.get("X-CACHE-XML-CODER"), is((Object) Arrays.asList("net.ihiroky.reservoir.rest.IntegerXMLCoder")));
         assertThat(header.get("X-CACHE-JSON-CODER"), is((Object) Arrays.asList("net.ihiroky.reservoir.rest.IntegerJSONCoder")));

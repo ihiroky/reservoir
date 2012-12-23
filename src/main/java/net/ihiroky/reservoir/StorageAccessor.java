@@ -9,7 +9,7 @@ import java.util.Properties;
  *
  * @author Hiroki Itoh
  */
-public interface CacheAccessor<K, V> {
+public interface StorageAccessor<K, V> {
 
     Ref<V> create(K key, V value);
 

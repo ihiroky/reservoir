@@ -9,8 +9,8 @@ import java.util.Map;
 
 /**
  * A {@link net.ihiroky.reservoir.Cache} implementation that uses {@link net.ihiroky.reservoir.Index} to manage
- * keys and {@link net.ihiroky.reservoir.CacheAccessor} to store values. All operations are thread-safe if
- * {@link net.ihiroky.reservoir.Index} and {@link net.ihiroky.reservoir.CacheAccessor} are thread-safe.
+ * keys and {@link net.ihiroky.reservoir.StorageAccessor} to store values. All operations are thread-safe if
+ * {@link net.ihiroky.reservoir.Index} and {@link net.ihiroky.reservoir.StorageAccessor} are thread-safe.
  *
  * @param <K> the type of keys maintained by this cache.
  * @param <V> the type of mapped values.
@@ -22,7 +22,7 @@ public class BasicCache<K, V> extends AbstractCache<K, V> implements CacheMBean 
     private Index<K, Ref<V>> index;
 
     /** stores values to a specified storage.*/
-    private CacheAccessor<K, V> cacheAccessor;
+    private StorageAccessor<K, V> storageAccessor;
 
     /**
      * {@link net.ihiroky.reservoir.IndexEventListener} to handle cache out and
@@ -34,12 +34,12 @@ public class BasicCache<K, V> extends AbstractCache<K, V> implements CacheMBean 
      * Constructs this object. This cache is registered to the platform MBean server.
      * @param name a name of this cache.
      * @param index an index to manage keys and key-value mapping.
-     * @param cacheAccessor a cacheAccessor to store values.
+     * @param storageAccessor a storageAccessor to store values.
      */
-    BasicCache(String name, Index<K, Ref<V>> index, CacheAccessor<K, V> cacheAccessor) {
+    BasicCache(String name, Index<K, Ref<V>> index, StorageAccessor<K, V> storageAccessor) {
         super(name);
         this.index = index;
-        this.cacheAccessor = cacheAccessor;
+        this.storageAccessor = storageAccessor;
         this.refIndexEventListener = new RefIndexEventListener();
         index.setEventListener(refIndexEventListener);
         MBeanSupport.registerMBean(this, getName());
@@ -72,7 +72,7 @@ public class BasicCache<K, V> extends AbstractCache<K, V> implements CacheMBean 
      */
     @Override
     public void put(K key, V value) {
-        cacheAccessor.update(key, value, index);
+        storageAccessor.update(key, value, index);
     }
 
     /**
@@ -80,7 +80,7 @@ public class BasicCache<K, V> extends AbstractCache<K, V> implements CacheMBean 
      */
     @Override
     public void putAll(Map<K, V> keyValues) {
-        cacheAccessor.update(keyValues, index);
+        storageAccessor.update(keyValues, index);
     }
 
     /**
@@ -93,7 +93,7 @@ public class BasicCache<K, V> extends AbstractCache<K, V> implements CacheMBean 
             return null;
         }
         V value = ref.value();
-        cacheAccessor.remove(key, ref);
+        storageAccessor.remove(key, ref);
         return value;
     }
 
@@ -107,7 +107,7 @@ public class BasicCache<K, V> extends AbstractCache<K, V> implements CacheMBean 
         for (Map.Entry<K, Ref<V>> refEntry : refEntries) {
             result.put(refEntry.getKey(), refEntry.getValue().value());
         }
-        cacheAccessor.remove(refEntries);
+        storageAccessor.remove(refEntries);
         return result;
     }
 
@@ -119,7 +119,7 @@ public class BasicCache<K, V> extends AbstractCache<K, V> implements CacheMBean 
     public void delete(K key) {
         Ref<V> ref = index.remove(key);
         if (ref != null) {
-            cacheAccessor.remove(key, ref);
+            storageAccessor.remove(key, ref);
         }
     }
 
@@ -129,7 +129,7 @@ public class BasicCache<K, V> extends AbstractCache<K, V> implements CacheMBean 
     @Override
     public void delete(Collection<K> keys) {
         Collection<Map.Entry<K, Ref<V>>> refEntries = index.remove(keys);
-        cacheAccessor.remove(refEntries);
+        storageAccessor.remove(refEntries);
     }
 
     /**
@@ -155,7 +155,7 @@ public class BasicCache<K, V> extends AbstractCache<K, V> implements CacheMBean 
             ref = entry.getValue();
             iterator.remove();
             refIndexEventListener.onRemove(index, key, ref);
-            cacheAccessor.remove(key, ref);
+            storageAccessor.remove(key, ref);
         }
     }
 
@@ -165,7 +165,7 @@ public class BasicCache<K, V> extends AbstractCache<K, V> implements CacheMBean 
      */
     @Override
     public void dispose() {
-        cacheAccessor.dispose();
+        storageAccessor.dispose();
         MBeanSupport.unregisterMBean(this, getName());
     }
 
@@ -199,7 +199,7 @@ public class BasicCache<K, V> extends AbstractCache<K, V> implements CacheMBean 
      */
     @Override
     public String getCacheAccessorClassName() {
-        return cacheAccessor.getClass().getName();
+        return storageAccessor.getClass().getName();
     }
 
     /**
@@ -296,7 +296,7 @@ public class BasicCache<K, V> extends AbstractCache<K, V> implements CacheMBean 
                 eventListener.onCacheOut(BasicCache.this, key, cacheRef);
             }
             boolean result = nextListener.onCacheOut(index, key, cacheRef);
-            cacheAccessor.remove(key, value); // cacheAccessor requires raw ref.
+            storageAccessor.remove(key, value); // storageAccessor requires raw ref.
             return result;
         }
     }

@@ -1,4 +1,4 @@
-package net.ihiroky.reservoir.accessor;
+package net.ihiroky.reservoir.storage;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -17,22 +17,22 @@ import java.util.Collections;
  *
  * @author Hiroki Itoh
  */
-public class MemoryMappedFileCacheAccessor<K, V>
-        extends FileCacheAccessor<K, V> implements MemoryMappedFileCacheAccessorMBean {
+public class MemoryMappedFileStorageAccessor<K, V>
+        extends FileStorageAccessor<K, V> implements MemoryMappedFileCacheAccessorMBean {
 
     private Collection<MappedByteBuffer> mappedByteBuffers = Collections.emptyList();
-    private Logger logger = LoggerFactory.getLogger(FileCacheAccessor.class);
+    private Logger logger = LoggerFactory.getLogger(FileStorageAccessor.class);
 
     @Override
     protected long getMaxPartitionSize(int blockSize) {
-        return ByteBufferCacheAccessor.maxPartitionSize(blockSize);
+        return ByteBufferStorageAccessor.maxPartitionSize(blockSize);
     }
 
     @Override
     protected ByteBlockManager createInstance(
             String name, File file, RandomAccessFile randomAccessFile, int blockSize) throws IOException {
         long size = randomAccessFile.length();
-        final int maxPartitionSize = ByteBufferCacheAccessor.maxPartitionSize(blockSize);
+        final int maxPartitionSize = ByteBufferStorageAccessor.maxPartitionSize(blockSize);
         if (size > maxPartitionSize) {
             size = maxPartitionSize;
             randomAccessFile.setLength(size);

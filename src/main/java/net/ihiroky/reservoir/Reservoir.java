@@ -1,14 +1,14 @@
 package net.ihiroky.reservoir;
 
-import net.ihiroky.reservoir.accessor.BulkInfo;
-import net.ihiroky.reservoir.accessor.ByteBufferCacheAccessor;
-import net.ihiroky.reservoir.accessor.ByteBufferInfo;
-import net.ihiroky.reservoir.accessor.FileCacheAccessor;
-import net.ihiroky.reservoir.accessor.FileInfo;
-import net.ihiroky.reservoir.accessor.HeapCacheAccessor;
-import net.ihiroky.reservoir.accessor.MemoryMappedFileCacheAccessor;
-import net.ihiroky.reservoir.accessor.RejectedAllocationHandler;
-import net.ihiroky.reservoir.accessor.RejectedAllocationPolicy;
+import net.ihiroky.reservoir.storage.BulkInfo;
+import net.ihiroky.reservoir.storage.ByteBufferStorageAccessor;
+import net.ihiroky.reservoir.storage.ByteBufferInfo;
+import net.ihiroky.reservoir.storage.FileStorageAccessor;
+import net.ihiroky.reservoir.storage.FileInfo;
+import net.ihiroky.reservoir.storage.HeapStorageAccessor;
+import net.ihiroky.reservoir.storage.MemoryMappedFileStorageAccessor;
+import net.ihiroky.reservoir.storage.RejectedAllocationHandler;
+import net.ihiroky.reservoir.storage.RejectedAllocationPolicy;
 import net.ihiroky.reservoir.coder.SerializableCoder;
 import net.ihiroky.reservoir.index.ConcurrentFIFOIndex;
 import net.ihiroky.reservoir.index.ConcurrentLRUIndex;
@@ -77,30 +77,30 @@ public final class Reservoir {
     public enum CacheAccessorType {
         HEAP {
             @Override
-            <K, V> CacheAccessor<K, V> create() {
-                return new HeapCacheAccessor<K, V>();
+            <K, V> StorageAccessor<K, V> create() {
+                return new HeapStorageAccessor<K, V>();
             }
         },
         BYTE_BUFFER {
             @Override
-            <K, V> CacheAccessor<K, V> create() {
-                return new ByteBufferCacheAccessor<K, V>();
+            <K, V> StorageAccessor<K, V> create() {
+                return new ByteBufferStorageAccessor<K, V>();
             }
         },
         MEMORY_MAPPED_FILE {
             @Override
-            <K, V> CacheAccessor<K, V> create() {
-                return new MemoryMappedFileCacheAccessor<K, V>();
+            <K, V> StorageAccessor<K, V> create() {
+                return new MemoryMappedFileStorageAccessor<K, V>();
             }
         },
         FILE {
             @Override
-            <K, V> CacheAccessor<K, V> create() {
-                return new FileCacheAccessor<K, V>();
+            <K, V> StorageAccessor<K, V> create() {
+                return new FileStorageAccessor<K, V>();
             }
         },;
 
-        abstract <K, V> CacheAccessor<K, V> create();
+        abstract <K, V> StorageAccessor<K, V> create();
     }
 
     public static CacheBuilder newCacheBuilder() {
@@ -115,16 +115,16 @@ public final class Reservoir {
         return new BlockingQueueBuilder();
     }
 
-    public static ByteBufferCacheAccessorBuilder newByteBufferCacheAccessorBuilder() {
-        return new ByteBufferCacheAccessorBuilder();
+    public static ByteBufferStorageAccessorBuilder newByteBufferCacheAccessorBuilder() {
+        return new ByteBufferStorageAccessorBuilder();
     }
 
-    public static FileCacheAccessorBuilder newFileCacheAccessorBuilder() {
-        return new FileCacheAccessorBuilder();
+    public static FileStorageAccessorBuilder newFileCacheAccessorBuilder() {
+        return new FileStorageAccessorBuilder();
     }
 
-    public static MemoryMappedFileCacheAccessorBuilder newMemoryMappedFileCacheAccessorBuilder() {
-        return new MemoryMappedFileCacheAccessorBuilder();
+    public static MemoryMappedFileStorageAccessorBuilder newMemoryMappedFileCacheAccessorBuilder() {
+        return new MemoryMappedFileStorageAccessorBuilder();
     }
 
     private static String randomName() {
@@ -150,7 +150,7 @@ public final class Reservoir {
 
         String name = randomName();
         Index<K, Ref<V>> index = IndexType.SIMPLE.create(16, -1);
-        ByteBufferCacheAccessor<K, V> cacheAccessor = new ByteBufferCacheAccessor<K, V>();
+        ByteBufferStorageAccessor<K, V> cacheAccessor = new ByteBufferStorageAccessor<K, V>();
         cacheAccessor.prepare(name, true, coder, new BulkInfo(size, blockSize, partitions),
                 RejectedAllocationPolicy.ABORT);
         return new BasicCache<K, V>(name, index, cacheAccessor);
@@ -174,7 +174,7 @@ public final class Reservoir {
             String name, long size, int blockSize, int partitions, Coder<V> coder) {
 
         Index<K, Ref<V>> index = IndexType.SIMPLE.create(16, -1);
-        ByteBufferCacheAccessor<K, V> cacheAccessor = new ByteBufferCacheAccessor<K, V>();
+        ByteBufferStorageAccessor<K, V> cacheAccessor = new ByteBufferStorageAccessor<K, V>();
         cacheAccessor.prepare(name, true, coder, new BulkInfo(size, blockSize, partitions),
                 RejectedAllocationPolicy.ABORT);
         return new BasicCache<K, V>(name, index, cacheAccessor);
@@ -223,7 +223,7 @@ public final class Reservoir {
         return LazyInitializationFieldHolder.MAX_DIRECT_MEMORY_SIZE;
     }
 
-    private static abstract class CacheAccessorBuilder<T extends CacheAccessorBuilder<T>> {
+    private static abstract class StorageAccessorBuilder<T extends StorageAccessorBuilder<T>> {
         int blockSize;
         int partitionsHint;
         RejectedAllocationHandler rejectedAllocationHandler;
@@ -233,7 +233,7 @@ public final class Reservoir {
         static final int DEFAULT_BLOCK_SIZE = 512;
         static final int DEFAULT_PARTITIONS = 1;
 
-        private CacheAccessorBuilder() {
+        private StorageAccessorBuilder() {
             clear();
         }
 
@@ -281,17 +281,17 @@ public final class Reservoir {
             return t();
         }
 
-        abstract <K, V> CacheAccessor<K, V> build(String name);
+        abstract <K, V> StorageAccessor<K, V> build(String name);
     }
 
-    public static final class ByteBufferCacheAccessorBuilder
-            extends CacheAccessorBuilder<ByteBufferCacheAccessorBuilder> {
+    public static final class ByteBufferStorageAccessorBuilder
+            extends StorageAccessorBuilder<ByteBufferStorageAccessorBuilder> {
         boolean direct;
         int usagePercent;
         List<ByteBufferInfo> byteBufferInfoList;
 
         static final int DEFAULT_USAGE_PERCENT = 90;
-        private ByteBufferCacheAccessorBuilder() {
+        private ByteBufferStorageAccessorBuilder() {
         }
 
         public void clear() {
@@ -303,7 +303,7 @@ public final class Reservoir {
 
         @Override
         @SuppressWarnings("unchecked")
-        <K, V> CacheAccessor<K, V> build(String name) {
+        <K, V> StorageAccessor<K, V> build(String name) {
             Coder<V> coder;
             try {
                 coder = (Coder<V>) coderClass.newInstance();
@@ -312,23 +312,23 @@ public final class Reservoir {
             }
 
             if ( ! byteBufferInfoList.isEmpty()) {
-                ByteBufferCacheAccessor<K, V> accessor = new ByteBufferCacheAccessor<K, V>();
+                ByteBufferStorageAccessor<K, V> accessor = new ByteBufferStorageAccessor<K, V>();
                 accessor.prepare(name, blockSize, coder, byteBufferInfoList, rejectedAllocationHandler);
                 return accessor;
             }
 
             BulkInfo bulkInfo = new BulkInfo(getMaxDirectMemorySize() / 100 * usagePercent, blockSize, partitionsHint);
-            ByteBufferCacheAccessor<K, V> accessor = new ByteBufferCacheAccessor<K, V>();
+            ByteBufferStorageAccessor<K, V> accessor = new ByteBufferStorageAccessor<K, V>();
             accessor.prepare(name, direct, coder, bulkInfo, rejectedAllocationHandler);
             return accessor;
         }
 
-        public ByteBufferCacheAccessorBuilder direct(boolean d) {
+        public ByteBufferStorageAccessorBuilder direct(boolean d) {
             this.direct = d;
             return this;
         }
 
-        public ByteBufferCacheAccessorBuilder usagePercent(int percent) {
+        public ByteBufferStorageAccessorBuilder usagePercent(int percent) {
             if (percent <= 0) {
                 throw new IllegalArgumentException("[usagePercent] percent must be > 0");
             }
@@ -336,7 +336,7 @@ public final class Reservoir {
             return this;
         }
 
-        public ByteBufferCacheAccessorBuilder byteBufferInfo(boolean direct, int capacity) {
+        public ByteBufferStorageAccessorBuilder byteBufferInfo(boolean direct, int capacity) {
             if (capacity < MIN_BYTES_PER_BLOCK) {
                 throw new IllegalStateException("[byteBufferInfo] capacity must be >= " + MIN_BYTES_PER_BLOCK);
             }
@@ -345,7 +345,7 @@ public final class Reservoir {
         }
     }
 
-    public static class FileCacheAccessorBuilder extends CacheAccessorBuilder<FileCacheAccessorBuilder> {
+    public static class FileStorageAccessorBuilder extends StorageAccessorBuilder<FileStorageAccessorBuilder> {
 
         File directory;
         FileInfo.Mode mode;
@@ -354,7 +354,7 @@ public final class Reservoir {
 
         static final File DEFAULT_DIRECTORY = new File(".");
 
-        private FileCacheAccessorBuilder() {
+        private FileStorageAccessorBuilder() {
         }
 
         @Override
@@ -367,7 +367,7 @@ public final class Reservoir {
 
         @Override
         @SuppressWarnings("unchecked")
-        <K, V> CacheAccessor<K, V> build(String name) {
+        <K, V> StorageAccessor<K, V> build(String name) {
             Coder<V> coder;
             try {
                 coder = (Coder<V>) coderClass.newInstance();
@@ -377,25 +377,25 @@ public final class Reservoir {
 
             try {
                 if ( ! fileInfoList.isEmpty()) {
-                    FileCacheAccessor<K, V> accessor = createInstance();
+                    FileStorageAccessor<K, V> accessor = createInstance();
                     accessor.prepare(name, blockSize, coder, fileInfoList, rejectedAllocationHandler);
                     return accessor;
                 }
 
                 BulkInfo bulkInfo = new BulkInfo(totalSize, blockSize, partitionsHint);
-                FileCacheAccessor<K, V> accessor = createInstance();
+                FileStorageAccessor<K, V> accessor = createInstance();
                 accessor.prepare(name, coder, directory, mode, bulkInfo, rejectedAllocationHandler);
                 return accessor;
             } catch (IOException ioe) {
-                throw new RuntimeException("failed to prepare CacheAccessor.", ioe);
+                throw new RuntimeException("failed to prepare StorageAccessor.", ioe);
             }
         }
 
-        protected <K, V> FileCacheAccessor<K, V> createInstance() {
-            return new FileCacheAccessor<K, V>();
+        protected <K, V> FileStorageAccessor<K, V> createInstance() {
+            return new FileStorageAccessor<K, V>();
         }
 
-        public FileCacheAccessorBuilder directory(File dir) {
+        public FileStorageAccessorBuilder directory(File dir) {
             if (dir == null) {
                 throw new NullPointerException("[directory] dir");
             }
@@ -403,7 +403,7 @@ public final class Reservoir {
             return this;
         }
 
-        public FileCacheAccessorBuilder mode(FileInfo.Mode m) {
+        public FileStorageAccessorBuilder mode(FileInfo.Mode m) {
             if (m == null) {
                 throw new NullPointerException("[mode] m");
             }
@@ -411,7 +411,7 @@ public final class Reservoir {
             return this;
         }
 
-        public FileCacheAccessorBuilder totalSize(long ts) {
+        public FileStorageAccessorBuilder totalSize(long ts) {
             if (ts < MIN_BYTES_PER_BLOCK) {
                 throw new IllegalArgumentException("[totalSize] ts must be >= " + MIN_BYTES_PER_BLOCK);
             }
@@ -419,7 +419,7 @@ public final class Reservoir {
             return this;
         }
 
-        public FileCacheAccessorBuilder fileInfo(String path, long size, FileInfo.Mode m) {
+        public FileStorageAccessorBuilder fileInfo(String path, long size, FileInfo.Mode m) {
             if (path == null) {
                 throw new NullPointerException("[fileInfo] path");
             }
@@ -434,14 +434,14 @@ public final class Reservoir {
         }
     }
 
-    public static class MemoryMappedFileCacheAccessorBuilder extends FileCacheAccessorBuilder {
+    public static class MemoryMappedFileStorageAccessorBuilder extends FileStorageAccessorBuilder {
 
-        private MemoryMappedFileCacheAccessorBuilder() {
+        private MemoryMappedFileStorageAccessorBuilder() {
         }
 
         @Override
-        protected <K, V> FileCacheAccessor<K, V> createInstance() {
-            return new MemoryMappedFileCacheAccessor<K, V>();
+        protected <K, V> FileStorageAccessor<K, V> createInstance() {
+            return new MemoryMappedFileStorageAccessor<K, V>();
         }
     }
 
@@ -450,7 +450,7 @@ public final class Reservoir {
         Properties props;
         String name;
         CacheAccessorType cacheAccessorType;
-        CacheAccessorBuilder<?> cacheAccessorBuilder;
+        StorageAccessorBuilder<?> storageAccessorBuilder;
 
         Builder() {
             clear();
@@ -460,7 +460,7 @@ public final class Reservoir {
             props = new Properties();
             name = randomName();
             cacheAccessorType = CacheAccessorType.HEAP;
-            cacheAccessorBuilder = null;
+            storageAccessorBuilder = null;
         }
 
         @SuppressWarnings("unchecked")
@@ -509,11 +509,11 @@ public final class Reservoir {
             return t();
         }
 
-        public T cacheAccessorBuilder(CacheAccessorBuilder<?> cab) {
+        public T cacheAccessorBuilder(StorageAccessorBuilder<?> cab) {
             if (cab == null) {
-                throw new NullPointerException("[cacheAccessorBuilder] cab");
+                throw new NullPointerException("[storageAccessorBuilder] cab");
             }
-            this.cacheAccessorBuilder = cab;
+            this.storageAccessorBuilder = cab;
             return t();
         }
     }
@@ -568,21 +568,21 @@ public final class Reservoir {
                 maxCacheSize = initialCacheSize;
             }
             Index<K, Ref<V>> index = indexType.create(initialCacheSize, maxCacheSize);
-            if (cacheAccessorBuilder != null) {
-                CacheAccessor<K, V> accessor = cacheAccessorBuilder.build(name);
+            if (storageAccessorBuilder != null) {
+                StorageAccessor<K, V> accessor = storageAccessorBuilder.build(name);
                 return new BasicCache<K, V>(name, index, accessor);
             }
 
-            CacheAccessor<K, V> cacheAccessor = cacheAccessorType.create();
-            cacheAccessor.prepare(name, props);
+            StorageAccessor<K, V> storageAccessor = cacheAccessorType.create();
+            storageAccessor.prepare(name, props);
 
             logger.debug("[build] name : {}", name);
             logger.debug("[build] maxCacheSize : {}", maxCacheSize);
             logger.debug("[build] initialCacheSize : {}", initialCacheSize);
             logger.debug("[build] index : {}", index);
-            logger.debug("[build] cacheAccessor : {}", cacheAccessor);
+            logger.debug("[build] storageAccessor : {}", storageAccessor);
             logger.debug("[build] properties : {}", props);
-            return new BasicCache<K, V>(name, index, cacheAccessor);
+            return new BasicCache<K, V>(name, index, storageAccessor);
         }
     }
 
@@ -597,18 +597,18 @@ public final class Reservoir {
             if (name == null || name.length() == 0) {
                 throw new IllegalStateException("[build] name is null or empty.");
             }
-            if (cacheAccessorBuilder != null) {
-                CacheAccessor<Object, E> cacheAccessor = cacheAccessorBuilder.build(name);
-                return new BasicQueue<E>(name, cacheAccessor);
+            if (storageAccessorBuilder != null) {
+                StorageAccessor<Object, E> storageAccessor = storageAccessorBuilder.build(name);
+                return new BasicQueue<E>(name, storageAccessor);
             }
 
-            CacheAccessor<Object, E> cacheAccessor = cacheAccessorType.create();
-            cacheAccessor.prepare(name, props);
+            StorageAccessor<Object, E> storageAccessor = cacheAccessorType.create();
+            storageAccessor.prepare(name, props);
 
             logger.debug("[build] name : {}", name);
-            logger.debug("[build] cacheAccessor : {}", cacheAccessor);
+            logger.debug("[build] storageAccessor : {}", storageAccessor);
             logger.debug("[build] properties : {}", props);
-            return new BasicQueue<E>(name, cacheAccessor);
+            return new BasicQueue<E>(name, storageAccessor);
         }
     }
 
@@ -639,19 +639,19 @@ public final class Reservoir {
             if (name == null || name.length() == 0) {
                 throw new IllegalStateException("[build] name is null or empty.");
             }
-            if (cacheAccessorBuilder != null) {
-                CacheAccessor<Object, E> cacheAccessor = cacheAccessorBuilder.build(name);
-                return new BasicBlockingQueue<E>(name, cacheAccessor, capacity);
+            if (storageAccessorBuilder != null) {
+                StorageAccessor<Object, E> storageAccessor = storageAccessorBuilder.build(name);
+                return new BasicBlockingQueue<E>(name, storageAccessor, capacity);
             }
 
-            CacheAccessor<Object, E> cacheAccessor = cacheAccessorType.create();
-            cacheAccessor.prepare(name, props);
+            StorageAccessor<Object, E> storageAccessor = cacheAccessorType.create();
+            storageAccessor.prepare(name, props);
 
             logger.debug("[build] name : {}", name);
             logger.debug("[build] capacity : {}", capacity);
-            logger.debug("[build] cacheAccessor : {}", cacheAccessor);
+            logger.debug("[build] storageAccessor : {}", storageAccessor);
             logger.debug("[build] properties : {}", props);
-            return new BasicBlockingQueue<E>(name, cacheAccessor, capacity);
+            return new BasicBlockingQueue<E>(name, storageAccessor, capacity);
         }
 
 

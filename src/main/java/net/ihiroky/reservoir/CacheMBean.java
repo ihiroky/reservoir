@@ -23,8 +23,8 @@ public interface CacheMBean {
     int size();
 
     /**
-     * Returns a name of class {@link net.ihiroky.reservoir.CacheAccessor} in this cache.
-     * @return a name of class {@link net.ihiroky.reservoir.CacheAccessor}.
+     * Returns a name of class {@link StorageAccessor} in this cache.
+     * @return a name of class {@link StorageAccessor}.
      */
     String getCacheAccessorClassName();
 

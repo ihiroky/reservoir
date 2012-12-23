@@ -1,6 +1,6 @@
 package net.ihiroky.reservoir;
 
-import net.ihiroky.reservoir.accessor.HeapCacheAccessor;
+import net.ihiroky.reservoir.storage.HeapStorageAccessor;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -19,15 +19,15 @@ import static org.junit.Assert.*;
 public class BasicQueueTest {
 
     private BasicQueue<byte[]> queue;
-    private CacheAccessor<Object, byte[]> cacheAccessor;
+    private StorageAccessor<Object, byte[]> storageAccessor;
     private byte[] b0 = new byte[]{1, 2, 3, 4, 5};
     private byte[] b1 = new byte[]{2, 3, 4, 5, 6};
     private byte[] b2 = new byte[]{3, 4, 5, 6, 7};
 
     @Before
     public void before() {
-        cacheAccessor = new HeapCacheAccessor<Object, byte[]>();
-        queue = new BasicQueue<byte[]>("BasicQueueTest", cacheAccessor);
+        storageAccessor = new HeapStorageAccessor<Object, byte[]>();
+        queue = new BasicQueue<byte[]>("BasicQueueTest", storageAccessor);
         b0 = new byte[]{1, 2, 3, 4, 5};
         b1 = new byte[]{2, 3, 4, 5, 6};
         b2 = new byte[]{3, 4, 5, 6, 7};

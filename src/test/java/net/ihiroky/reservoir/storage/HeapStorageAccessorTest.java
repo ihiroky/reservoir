@@ -1,4 +1,4 @@
-package net.ihiroky.reservoir.accessor;
+package net.ihiroky.reservoir.storage;
 
 import net.ihiroky.reservoir.Index;
 import net.ihiroky.reservoir.Ref;
@@ -17,13 +17,13 @@ import static org.junit.Assert.*;
  *
  * @author Hiroki Itoh
  */
-public class HeapCacheAccessorTest {
+public class HeapStorageAccessorTest {
 
-    private HeapCacheAccessor<Integer, Integer> heapCacheAccessor;
+    private HeapStorageAccessor<Integer, Integer> heapCacheAccessor;
 
     @Before
     public void before() {
-        heapCacheAccessor = new HeapCacheAccessor<Integer, Integer>();
+        heapCacheAccessor = new HeapStorageAccessor<Integer, Integer>();
     }
 
     @Test

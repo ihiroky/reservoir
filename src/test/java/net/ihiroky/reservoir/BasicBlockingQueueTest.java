@@ -1,8 +1,8 @@
 package net.ihiroky.reservoir;
 
-import net.ihiroky.reservoir.accessor.BulkInfo;
-import net.ihiroky.reservoir.accessor.ByteBufferCacheAccessor;
-import net.ihiroky.reservoir.accessor.RejectedAllocationPolicy;
+import net.ihiroky.reservoir.storage.BulkInfo;
+import net.ihiroky.reservoir.storage.ByteBufferStorageAccessor;
+import net.ihiroky.reservoir.storage.RejectedAllocationPolicy;
 import net.ihiroky.reservoir.coder.ByteArrayCoder;
 import org.junit.After;
 import org.junit.Before;
@@ -29,14 +29,14 @@ public class BasicBlockingQueueTest {
 
     private BasicBlockingQueue<byte[]> queue;
     private Collection<BasicBlockingQueue<?>> disposeSet;
-    private ByteBufferCacheAccessor<Object, byte[]> cacheAccessor;
+    private ByteBufferStorageAccessor<Object, byte[]> cacheAccessor;
     private byte[] b0;
     private byte[] b1;
     private byte[] b2;
 
     @Before
     public void before() throws Exception{
-        cacheAccessor = new ByteBufferCacheAccessor<Object, byte[]>();
+        cacheAccessor = new ByteBufferStorageAccessor<Object, byte[]>();
         cacheAccessor.prepare("BasicBlockingQueueTest", false, new ByteArrayCoder(), new BulkInfo(48, 8, 1),
                 RejectedAllocationPolicy.WAIT_FOR_FREE_BLOCK);
         queue = new BasicBlockingQueue<byte[]>("BasicBlockingQueueTest", cacheAccessor);

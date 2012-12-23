@@ -1,6 +1,6 @@
-package net.ihiroky.reservoir.accessor;
+package net.ihiroky.reservoir.storage;
 
-import net.ihiroky.reservoir.CacheAccessor;
+import net.ihiroky.reservoir.StorageAccessor;
 import net.ihiroky.reservoir.ConcurrentTestUtil;
 import net.ihiroky.reservoir.Index;
 import net.ihiroky.reservoir.PropertiesSupport;
@@ -23,9 +23,9 @@ import java.util.concurrent.TimeUnit;
  *
  * @author Hiroki Itoh
  */
-public class AbstractBlockedByteCacheAccessorPerfTest {
+public class AbstractBlockedByteStorageAccessorPerfTest {
 
-    Set<CacheAccessor<?, ?>> disposeSet;
+    Set<StorageAccessor<?, ?>> disposeSet;
 
     static final int size = 8192;
     static final int blockSize = 128;
@@ -36,18 +36,18 @@ public class AbstractBlockedByteCacheAccessorPerfTest {
 
     @Before
     public void before() throws Exception {
-        disposeSet = new HashSet<CacheAccessor<?, ?>>();
+        disposeSet = new HashSet<StorageAccessor<?, ?>>();
     }
 
     @After
     public void after() {
-        for (CacheAccessor<?, ?> b : disposeSet) {
+        for (StorageAccessor<?, ?> b : disposeSet) {
             b.dispose();
         }
     }
 
     private void testUpdateMultiThread(String name, Properties props,
-                                       final AbstractBlockedByteCacheAccessor<Integer, String> accessor) throws Exception {
+                                       final AbstractBlockedByteStorageAccessor<Integer, String> accessor) throws Exception {
         accessor.prepare(name.concat("-testUpdateMultiThread"), props);
         disposeSet.add(accessor);
 
@@ -74,47 +74,47 @@ public class AbstractBlockedByteCacheAccessorPerfTest {
     @Test
     public void testByteBufferCacheAccessor() throws Exception {
         Properties props = PropertiesSupport.builder()
-                .set("reservoir.ByteBufferCacheAccessor.direct", "false")
-                .set("reservoir.ByteBufferCacheAccessor.size", String.valueOf(size))
-                .set("reservoir.ByteBufferCacheAccessor.blockSize", String.valueOf(blockSize))
-                .set("reservoir.ByteBufferCacheAccessor.partitions", String.valueOf(partitions))
-                .set("reservoir.ByteBufferCacheAccessor.coder", "net.ihiroky.reservoir.coder.SimpleStringCoder")
+                .set("reservoir.ByteBufferStorageAccessor.direct", "false")
+                .set("reservoir.ByteBufferStorageAccessor.size", String.valueOf(size))
+                .set("reservoir.ByteBufferStorageAccessor.blockSize", String.valueOf(blockSize))
+                .set("reservoir.ByteBufferStorageAccessor.partitions", String.valueOf(partitions))
+                .set("reservoir.ByteBufferStorageAccessor.coder", "net.ihiroky.reservoir.coder.SimpleStringCoder")
                 .set("times", "500000").build();
 
-        testUpdateMultiThread("ByteBufferCacheAccessorTest", props,
-                new ByteBufferCacheAccessor<Integer, String>());
+        testUpdateMultiThread("ByteBufferStorageAccessorTest", props,
+                new ByteBufferStorageAccessor<Integer, String>());
     }
 
     @Test
     public void testMemoryMappedFileCacheAccessor() throws Exception {
 
         PropertiesSupport.PropertiesBuilder builder = PropertiesSupport.builder();
-        builder.set("reservoir.MemoryMappedFileCacheAccessor.blockSize", String.valueOf(blockSize));
-        builder.set("reservoir.MemoryMappedFileCacheAccessor.coder", "net.ihiroky.reservoir.coder.SimpleStringCoder");
+        builder.set("reservoir.MemoryMappedFileStorageAccessor.blockSize", String.valueOf(blockSize));
+        builder.set("reservoir.MemoryMappedFileStorageAccessor.coder", "net.ihiroky.reservoir.coder.SimpleStringCoder");
         int partitionSize = size / partitions;
         for (int i = 0; i < partitions; i++) {
-            builder.set("reservoir.MemoryMappedFileCacheAccessor.file." + i + ".size", String.valueOf(partitionSize));
-            builder.set("reservoir.MemoryMappedFileCacheAccessor.file." + i + ".path", folder.newFile().getPath());
+            builder.set("reservoir.MemoryMappedFileStorageAccessor.file." + i + ".size", String.valueOf(partitionSize));
+            builder.set("reservoir.MemoryMappedFileStorageAccessor.file." + i + ".path", folder.newFile().getPath());
         }
         builder.set("times", "500000");
 
-        testUpdateMultiThread("MemoryMappedFileCacheAccessorTest", builder.build(),
-                new MemoryMappedFileCacheAccessor<Integer, String>());
+        testUpdateMultiThread("MemoryMappedFileStorageAccessorTest", builder.build(),
+                new MemoryMappedFileStorageAccessor<Integer, String>());
     }
 
     @Test
     public void testFileCacheAccessor() throws Exception {
         PropertiesSupport.PropertiesBuilder builder = PropertiesSupport.builder();
-        builder.set("reservoir.FileCacheAccessor.blockSize", String.valueOf(blockSize));
-        builder.set("reservoir.FileCacheAccessor.coder", "net.ihiroky.reservoir.coder.SimpleStringCoder");
+        builder.set("reservoir.FileStorageAccessor.blockSize", String.valueOf(blockSize));
+        builder.set("reservoir.FileStorageAccessor.coder", "net.ihiroky.reservoir.coder.SimpleStringCoder");
         int partitionSize = size / partitions;
         for (int i = 0; i < partitions; i++) {
-            builder.set("reservoir.FileCacheAccessor.file." + i + ".size", String.valueOf(partitionSize));
-            builder.set("reservoir.FileCacheAccessor.file." + i + ".path", folder.newFile().getPath());
+            builder.set("reservoir.FileStorageAccessor.file." + i + ".size", String.valueOf(partitionSize));
+            builder.set("reservoir.FileStorageAccessor.file." + i + ".path", folder.newFile().getPath());
         }
         builder.set("times", "150000");
 
-        testUpdateMultiThread("FileCacheAccessor", builder.build(),
-                new FileCacheAccessor<Integer, String>());
+        testUpdateMultiThread("FileStorageAccessor", builder.build(),
+                new FileStorageAccessor<Integer, String>());
     }
 }

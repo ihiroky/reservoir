@@ -1,6 +1,6 @@
 package net.ihiroky.reservoir;
 
-import net.ihiroky.reservoir.accessor.HeapCacheAccessor;
+import net.ihiroky.reservoir.storage.HeapStorageAccessor;
 import net.ihiroky.reservoir.coder.JSONCoder;
 import net.ihiroky.reservoir.index.LRUIndex;
 import org.junit.After;
@@ -46,8 +46,8 @@ public class BasicCacheTest {
 
     private <K, V> BasicCache<K, V> createBasicCache(int initialSize, int maxSize) {
         Index<K, Ref<V>> index = new LRUIndex<K, Ref<V>>(initialSize, maxSize);
-        CacheAccessor<K, V> cacheAccessor = new HeapCacheAccessor<K, V>();
-        BasicCache<K, V> basicCache = new BasicCache<K, V>("test", index, cacheAccessor);
+        StorageAccessor<K, V> storageAccessor = new HeapStorageAccessor<K, V>();
+        BasicCache<K, V> basicCache = new BasicCache<K, V>("test", index, storageAccessor);
         disposeInAfterSet.add(basicCache);
         return basicCache;
     }

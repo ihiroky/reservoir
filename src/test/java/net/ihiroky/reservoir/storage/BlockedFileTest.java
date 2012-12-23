@@ -1,4 +1,4 @@
-package net.ihiroky.reservoir.accessor;
+package net.ihiroky.reservoir.storage;
 
 import org.junit.Rule;
 import org.junit.rules.TemporaryFolder;
