@@ -33,7 +33,7 @@ public class ConcurrentLinkedHashMapIndex<K, V> implements Index<K, V> {
             @Override
             protected RemoveEldestPolicy removeEldestEntry(Map.Entry<K, V> eldestEntry) {
                 if (size() > ConcurrentLinkedHashMapIndex.this.capacity.get()) {
-                    return eventListener.onCacheOut(ConcurrentLinkedHashMapIndex.this,
+                    return eventListener.onDiscard(ConcurrentLinkedHashMapIndex.this,
                             eldestEntry.getKey(), eldestEntry.getValue()) ? RemoveEldestPolicy.REMOVE : RemoveEldestPolicy.READY_TO_REMOVE;
                 }
                 return RemoveEldestPolicy.DO_NOTHING;
@@ -96,8 +96,8 @@ public class ConcurrentLinkedHashMapIndex<K, V> implements Index<K, V> {
     }
 
     @Override
-    public void removeSilently(K key, V value) {
-        map.remove(key, value);
+    public boolean removeSilently(K key, V value) {
+        return map.remove(key, value);
     }
 
     @Override
@@ -115,12 +115,12 @@ public class ConcurrentLinkedHashMapIndex<K, V> implements Index<K, V> {
     }
 
     @Override
-    public boolean contains(K key) {
+    public boolean containsKey(K key) {
         return map.containsKey(key);
     }
 
     @Override
-    public boolean containsAll(Collection<K> keys) {
+    public boolean containsAllKeys(Collection<K> keys) {
         for (K key : keys) {
             if (!map.containsKey(key)) {
                 return false;

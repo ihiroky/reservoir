@@ -59,7 +59,7 @@ class MockIndexEventListener<K, V> implements IndexEventListener<K, V> {
     }
 
     @Override
-    public boolean onCacheOut(Index<K, V> index, K key, V value) {
+    public boolean onDiscard(Index<K, V> index, K key, V value) {
         argsList.add(new Args<K, V>(Method.CACHE_OUT, index, key, value));
         return true;
     }

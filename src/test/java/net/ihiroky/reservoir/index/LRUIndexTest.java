@@ -26,11 +26,11 @@ public class LRUIndexTest {
         index.get(0);
         index.put(5, 5);
         assertThat(index.size(), is(5));
-        assertThat(index.contains(0), is(true));
-        assertThat(index.contains(1), is(false));
-        assertThat(index.contains(2), is(true));
-        assertThat(index.contains(3), is(true));
-        assertThat(index.contains(4), is(true));
-        assertThat(index.contains(5), is(true));
+        assertThat(index.containsKey(0), is(true));
+        assertThat(index.containsKey(1), is(false));
+        assertThat(index.containsKey(2), is(true));
+        assertThat(index.containsKey(3), is(true));
+        assertThat(index.containsKey(4), is(true));
+        assertThat(index.containsKey(5), is(true));
     }
 }

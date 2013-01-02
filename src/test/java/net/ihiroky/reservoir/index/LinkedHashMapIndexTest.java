@@ -78,15 +78,15 @@ public class LinkedHashMapIndexTest {
         index.put(0, 10);
         index.put(1, 11);
         index.put(2, 12);
-        assertThat(index.contains(0), is(true));
-        assertThat(index.contains(1), is(true));
-        assertThat(index.contains(2), is(true));
-        assertThat(index.contains(-1), is(false));
-        assertThat(index.contains(3), is(false));
-        assertThat(index.containsAll(new HashSet<Integer>(Arrays.asList(0, 1, 2))), is(true));
-        assertThat(index.containsAll(new HashSet<Integer>(Arrays.asList(0, 1, 2, 3))), is(false));
-        assertThat(index.containsAll(new HashSet<Integer>(Arrays.asList(1, 2))), is(true));
-        assertThat(index.containsAll(new HashSet<Integer>(Arrays.asList(-1, 1, 2))), is(false));
+        assertThat(index.containsKey(0), is(true));
+        assertThat(index.containsKey(1), is(true));
+        assertThat(index.containsKey(2), is(true));
+        assertThat(index.containsKey(-1), is(false));
+        assertThat(index.containsKey(3), is(false));
+        assertThat(index.containsAllKeys(new HashSet<Integer>(Arrays.asList(0, 1, 2))), is(true));
+        assertThat(index.containsAllKeys(new HashSet<Integer>(Arrays.asList(0, 1, 2, 3))), is(false));
+        assertThat(index.containsAllKeys(new HashSet<Integer>(Arrays.asList(1, 2))), is(true));
+        assertThat(index.containsAllKeys(new HashSet<Integer>(Arrays.asList(-1, 1, 2))), is(false));
     }
 
     @Test
@@ -209,7 +209,7 @@ public class LinkedHashMapIndexTest {
         index.put(4, 14);
         index.put(5, 15);
         eventListener.argsList.clear();
-        index.put(6, 16); // サイズ規定により onCacheOut(), その後に onPut
+        index.put(6, 16); // サイズ規定により onDiscard(), その後に onPut
         args = eventListener.argsList.get(0);
         assertThat(args.method, is(MockIndexEventListener.Method.CACHE_OUT));
         assertThat(args.key, is(1));

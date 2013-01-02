@@ -20,7 +20,7 @@ public class BasicQueuePerfTest {
     public void testMultiThread() throws Exception {
         final BasicQueue<Integer> queue = Reservoir.newQueueBuilder()
                 .name("BasicQueueTest#testMultiThread")
-                .cacheAccessorType(Reservoir.CacheAccessorType.BYTE_BUFFER)
+                .storageAccessorType(Reservoir.StorageAccessorType.BYTE_BUFFER)
                 .property(ByteBufferStorageAccessor.class, "direct", "true")
                 .property(ByteBufferStorageAccessor.class, "blockSize", "8")
                 .property(ByteBufferStorageAccessor.class, "partitions", "2")

@@ -33,11 +33,11 @@ public class CompoundCacheTest {
     public void before() {
         main = Reservoir.newCacheBuilder().name("main").maxCacheSize(5)
                 .indexType(Reservoir.IndexType.LRU)
-                .cacheAccessorType(Reservoir.CacheAccessorType.HEAP)
+                .storageAccessorType(Reservoir.StorageAccessorType.HEAP)
                 .build();
         sub = Reservoir.newCacheBuilder().name("sub")
                 .indexType(Reservoir.IndexType.LRU)
-                .cacheAccessorType(Reservoir.CacheAccessorType.BYTE_BUFFER)
+                .storageAccessorType(Reservoir.StorageAccessorType.BYTE_BUFFER)
                 .property("reservoir.ByteBufferStorageAccessor.direct", "true")
                 .property("reservoir.ByteBufferStorageAccessor.size", "8192")
                 .property("reservoir.ByteBufferStorageAccessor.blockSize", "256")

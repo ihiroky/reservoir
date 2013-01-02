@@ -137,7 +137,7 @@ public class BasicCache<K, V> extends AbstractCache<K, V> implements CacheMBean 
      */
     @Override
     public boolean containsKey(K key) {
-        return index.contains(key);
+        return index.containsKey(key);
     }
 
     /**
@@ -148,7 +148,7 @@ public class BasicCache<K, V> extends AbstractCache<K, V> implements CacheMBean 
         Map.Entry<K, Ref<V>> entry;
         K key;
         Ref<V> ref;
-        // No event happens when index entry set calls. So refIndexEventListener is directly called here.
+        // No event happens when index entry add calls. So refIndexEventListener is directly called here.
         for (Iterator<Map.Entry<K, Ref<V>>> iterator = index.entrySet().iterator(); iterator.hasNext(); ) {
             entry = iterator.next();
             key = entry.getKey();
@@ -254,7 +254,7 @@ public class BasicCache<K, V> extends AbstractCache<K, V> implements CacheMBean 
      * An event listener to handle events of {@link net.ihiroky.reservoir.Index} held by this cache.
      * On receiving events, {@link net.ihiroky.reservoir.Ref} containing the {@code value} passed to methods
      * is created and is passed to cache event listeners held by this cache. And a next index event listener
-     * is called if set in the cache.
+     * is called if add in the cache.
      */
     private class RefIndexEventListener implements IndexEventListener<K, Ref<V>> {
 
@@ -290,12 +290,12 @@ public class BasicCache<K, V> extends AbstractCache<K, V> implements CacheMBean 
          *  In addition, the value allocation is released.
          */
         @Override
-        public boolean onCacheOut(Index<K, Ref<V>> index, K key, Ref<V> value) {
+        public boolean onDiscard(Index<K, Ref<V>> index, K key, Ref<V> value) {
             CacheRef<V> cacheRef = new CacheRef<V>(value);
             for (CacheEventListener<K, V> eventListener : eventListenerIterable()) {
                 eventListener.onCacheOut(BasicCache.this, key, cacheRef);
             }
-            boolean result = nextListener.onCacheOut(index, key, cacheRef);
+            boolean result = nextListener.onDiscard(index, key, cacheRef);
             storageAccessor.remove(key, value); // storageAccessor requires raw ref.
             return result;
         }

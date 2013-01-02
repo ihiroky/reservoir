@@ -111,10 +111,8 @@ public class SimpleIndex<K, V> implements Index<K, V> {
     }
 
     @Override
-    public void removeSilently(K key, V value) {
-        if (key != null && value != null) {
-            index.remove(key, value);
-        }
+    public boolean removeSilently(K key, V value) {
+        return (key != null && value != null) && index.remove(key, value);
     }
 
     @Override
@@ -135,12 +133,12 @@ public class SimpleIndex<K, V> implements Index<K, V> {
     }
 
     @Override
-    public boolean contains(K key) {
+    public boolean containsKey(K key) {
         return index.containsKey(key);
     }
 
     @Override
-    public boolean containsAll(Collection<K> keySet) {
+    public boolean containsAllKeys(Collection<K> keySet) {
         Map<K, V> indexMap = this.index;
         for (K key : keySet) {
             if (!indexMap.containsKey(key)) {

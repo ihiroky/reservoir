@@ -68,15 +68,15 @@ public class ByteBufferStorageAccessorTest {
     @Test
     public void testPrepare() {
         Properties props2 = PropertiesSupport.builder()
-                .set(ByteBufferStorageAccessor.class, "blockSize", "8")
-                .set(ByteBufferStorageAccessor.class, "partition.1.direct", "true")
-                .set(ByteBufferStorageAccessor.class, "partition.1.capacity", "16")
-                .set(ByteBufferStorageAccessor.class, "partition.2.direct", "true")
-                .set(ByteBufferStorageAccessor.class, "partition.2.capacity", "16")
-                .set(ByteBufferStorageAccessor.class, "partition.3.direct", "true")
-                .set(ByteBufferStorageAccessor.class, "partition.3.capacity", "16")
-                .set(ByteBufferStorageAccessor.class, "partition.4.direct", "true")
-                .set(ByteBufferStorageAccessor.class, "partition.4.capacity", "16")
+                .add(ByteBufferStorageAccessor.class, "blockSize", "8")
+                .add(ByteBufferStorageAccessor.class, "partition.1.direct", "true")
+                .add(ByteBufferStorageAccessor.class, "partition.1.capacity", "16")
+                .add(ByteBufferStorageAccessor.class, "partition.2.direct", "true")
+                .add(ByteBufferStorageAccessor.class, "partition.2.capacity", "16")
+                .add(ByteBufferStorageAccessor.class, "partition.3.direct", "true")
+                .add(ByteBufferStorageAccessor.class, "partition.3.capacity", "16")
+                .add(ByteBufferStorageAccessor.class, "partition.4.direct", "true")
+                .add(ByteBufferStorageAccessor.class, "partition.4.capacity", "16")
                 .build();
 
         ByteBufferStorageAccessor<Integer, String> instance = new ByteBufferStorageAccessor<Integer, String>();
@@ -93,10 +93,10 @@ public class ByteBufferStorageAccessorTest {
     @Test
     public void testPrepareUsagePercent() {
         Properties props2 = PropertiesSupport.builder()
-                .set(ByteBufferStorageAccessor.class, "direct", "true")
-                .set(ByteBufferStorageAccessor.class, "usagePercent", "10")
-                .set(ByteBufferStorageAccessor.class, "blockSize", "256")
-                .set(ByteBufferStorageAccessor.class, "partitions", "1")
+                .add(ByteBufferStorageAccessor.class, "direct", "true")
+                .add(ByteBufferStorageAccessor.class, "usagePercent", "10")
+                .add(ByteBufferStorageAccessor.class, "blockSize", "256")
+                .add(ByteBufferStorageAccessor.class, "partitions", "1")
                 .build();
 
         ByteBufferStorageAccessor<Integer, String> instance = new ByteBufferStorageAccessor<Integer, String>();

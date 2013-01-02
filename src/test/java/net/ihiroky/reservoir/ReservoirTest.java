@@ -84,7 +84,7 @@ public class ReservoirTest {
     @Test
     public void testCreateQueue() throws Exception {
         BasicQueue<byte[]> queue = Reservoir.newQueueBuilder()
-                .cacheAccessorType(Reservoir.CacheAccessorType.BYTE_BUFFER)
+                .storageAccessorType(Reservoir.StorageAccessorType.BYTE_BUFFER)
                 .property("reservoir.ByteBufferStorageAccessor.direct", "true")
                 .property("reservoir.ByteBufferStorageAccessor.size", "8192")
                 .property("reservoir.ByteBufferStorageAccessor.blockSize", "256")

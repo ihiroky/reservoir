@@ -1,12 +1,16 @@
 package net.ihiroky.reservoir;
 
 /**
- * Created on 12/09/18, 14:58
+ * A {@code Ref} is a reference of a stored object that is maintained by {@link net.ihiroky.reservoir.StorageAccessor}.
  *
  * @author Hiroki Itoh
  */
 public interface Ref<V> {
 
+    /**
+     * Returns a value referenced by this instance.
+     * @return a value referenced by this instance
+     */
     V value();
 
 }

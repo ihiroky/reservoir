@@ -44,7 +44,7 @@ public class LinkedHashMapIndex<K, V> implements Index<K, V> {
             @Override
             protected boolean removeEldestEntry(Map.Entry<K, V> eldest) {
                 return (size() > LinkedHashMapIndex.this.capacity)
-                        && eventListener.onCacheOut(LinkedHashMapIndex.this, eldest.getKey(), eldest.getValue());
+                        && eventListener.onDiscard(LinkedHashMapIndex.this, eldest.getKey(), eldest.getValue());
             }
         };
     }
@@ -123,10 +123,8 @@ public class LinkedHashMapIndex<K, V> implements Index<K, V> {
     }
 
     @Override
-    public void removeSilently(K key, V value) {
-        if (value.equals(index.get(key))) {
-            index.remove(key);
-        }
+    public boolean removeSilently(K key, V value) {
+        return value.equals(index.get(key)) && (index.remove(key) != null);
     }
 
     @Override
@@ -150,12 +148,12 @@ public class LinkedHashMapIndex<K, V> implements Index<K, V> {
     }
 
     @Override
-    public boolean contains(K key) {
+    public boolean containsKey(K key) {
         return index.containsKey(key);
     }
 
     @Override
-    public boolean containsAll(Collection<K> keySet) {
+    public boolean containsAllKeys(Collection<K> keySet) {
         Map<K, V> indexMap = this.index;
         for (K key : keySet) {
             if (!indexMap.containsKey(key)) {

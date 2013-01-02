@@ -8,30 +8,32 @@ import java.util.Map;
 
 /**
  * Maps keys to values like {@code java.util.Map}. A {@code Cache} can't contain duplicate keys.
- * {@code null} key or value are not supported.
+ * {@code null} key or value are not supported. The {@code Cache} sends cache structure change events to
+ * {@link net.ihiroky.reservoir.CacheEventListener} registered by
+ * {@link net.ihiroky.reservoir.Cache#addEventListener(CacheEventListener)}.
  *
  * @author Hiroki Itoh
  */
 public interface Cache<K, V> extends CacheMBean, Iterable<Map.Entry<K, V>> {
 
     /**
-     * Returns the value to which the specified key is mapped, or null if this cache contains no mapping for the key.
-     * If this cache contains a mapping from a key {@code k} to a value {@code v} such that {@code key.equals(k)},
+     * Returns the value to which the specified key is mapped, or null if this cache containsKey no mapping for the key.
+     * If this cache containsKey a mapping from a key {@code k} to a value {@code v} such that {@code key.equals(k)},
      * then this method returns {@code v}; otherwise it returns null. The key must not be null.
      *
      * @param key a key whose associated value is to be returned
-     * @return a value to which the specified key is mapped, or null if this cache contains no mapping for the key
+     * @return a value to which the specified key is mapped, or null if this cache containsKey no mapping for the key
      */
     V get(K key);
 
     /**
-     * Returns the values to which the specified keys are mapped, or an empty map if this cache contains no mapping
-     * for the keys. If this cache contains a mapping from a keys {@code k} to a values {@code v} such that
-     * {@code keys.contains(k)}, then this method returns {@code v}; otherwise it returns an empty map.
+     * Returns the values to which the specified keys are mapped, or an empty map if this cache containsKey no mapping
+     * for the keys. If this cache containsKey a mapping from a keys {@code k} to a values {@code v} such that
+     * {@code keys.containsKey(k)}, then this method returns {@code v}; otherwise it returns an empty map.
      * The keys must not be null.
      *
      * @param keys keys whose associated values are to be returned
-     * @return values to which the specified keys are mapped, or null if this cache contains no mapping for the keys
+     * @return values to which the specified keys are mapped, or null if this cache containsKey no mapping for the keys
      */
     Map<K, V> get(Collection<K> keys);
 
@@ -53,7 +55,7 @@ public interface Cache<K, V> extends CacheMBean, Iterable<Map.Entry<K, V>> {
     void putAll(Map<K, V> keyValues);
 
     /**
-     * Removes the mapping for a key from this cache if it is present. If this cache contains a mapping
+     * Removes the mapping for a key from this cache if it is present. If this cache containsKey a mapping
      * from key {@code k} to value {@code v} such that {@code key.equals(k)}, that mapping is removed.
      * Returns the value to which this cache previously associated the key, or null if the map contained
      * no mapping for the key.
@@ -64,8 +66,8 @@ public interface Cache<K, V> extends CacheMBean, Iterable<Map.Entry<K, V>> {
     V remove(K key);
 
     /**
-     * Removes the mapping for keys from this cache if they are present. If this cache contains mappings
-     * from keys {@code k} to values {@code v} such that {@code key.contains(k)}, those mappings are removed.
+     * Removes the mapping for keys from this cache if they are present. If this cache containsKey mappings
+     * from keys {@code k} to values {@code v} such that {@code key.containsKey(k)}, those mappings are removed.
      * Returns the mappings which this cache previously holds, or null if the map contained no mapping for the keys.
      *
      * @param keys keys whose mappings are to be removed from this cache
@@ -91,10 +93,10 @@ public interface Cache<K, V> extends CacheMBean, Iterable<Map.Entry<K, V>> {
 
     /**
      * Returns true if this cache contains a mapping for the specified key. Returns true if and only if this cache
-     * contains a mapping for a key {@code k} such that {@code key.equals(k)}.
+     * containsKey a mapping for a key {@code k} such that {@code key.equals(k)}.
      *
      * @param key key whose presence in this cache is tested
-     * @return true if this cache contains mapping for the specified key
+     * @return true if this cache containsKey mapping for the specified key
      */
     boolean containsKey(K key);
 

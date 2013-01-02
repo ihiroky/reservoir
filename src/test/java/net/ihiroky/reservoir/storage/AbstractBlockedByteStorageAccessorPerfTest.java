@@ -74,12 +74,12 @@ public class AbstractBlockedByteStorageAccessorPerfTest {
     @Test
     public void testByteBufferCacheAccessor() throws Exception {
         Properties props = PropertiesSupport.builder()
-                .set("reservoir.ByteBufferStorageAccessor.direct", "false")
-                .set("reservoir.ByteBufferStorageAccessor.size", String.valueOf(size))
-                .set("reservoir.ByteBufferStorageAccessor.blockSize", String.valueOf(blockSize))
-                .set("reservoir.ByteBufferStorageAccessor.partitions", String.valueOf(partitions))
-                .set("reservoir.ByteBufferStorageAccessor.coder", "net.ihiroky.reservoir.coder.SimpleStringCoder")
-                .set("times", "500000").build();
+                .add("reservoir.ByteBufferStorageAccessor.direct", "false")
+                .add("reservoir.ByteBufferStorageAccessor.size", String.valueOf(size))
+                .add("reservoir.ByteBufferStorageAccessor.blockSize", String.valueOf(blockSize))
+                .add("reservoir.ByteBufferStorageAccessor.partitions", String.valueOf(partitions))
+                .add("reservoir.ByteBufferStorageAccessor.coder", "net.ihiroky.reservoir.coder.SimpleStringCoder")
+                .add("times", "500000").build();
 
         testUpdateMultiThread("ByteBufferStorageAccessorTest", props,
                 new ByteBufferStorageAccessor<Integer, String>());
@@ -89,14 +89,14 @@ public class AbstractBlockedByteStorageAccessorPerfTest {
     public void testMemoryMappedFileCacheAccessor() throws Exception {
 
         PropertiesSupport.PropertiesBuilder builder = PropertiesSupport.builder();
-        builder.set("reservoir.MemoryMappedFileStorageAccessor.blockSize", String.valueOf(blockSize));
-        builder.set("reservoir.MemoryMappedFileStorageAccessor.coder", "net.ihiroky.reservoir.coder.SimpleStringCoder");
+        builder.add("reservoir.MemoryMappedFileStorageAccessor.blockSize", String.valueOf(blockSize));
+        builder.add("reservoir.MemoryMappedFileStorageAccessor.coder", "net.ihiroky.reservoir.coder.SimpleStringCoder");
         int partitionSize = size / partitions;
         for (int i = 0; i < partitions; i++) {
-            builder.set("reservoir.MemoryMappedFileStorageAccessor.file." + i + ".size", String.valueOf(partitionSize));
-            builder.set("reservoir.MemoryMappedFileStorageAccessor.file." + i + ".path", folder.newFile().getPath());
+            builder.add("reservoir.MemoryMappedFileStorageAccessor.file." + i + ".size", String.valueOf(partitionSize));
+            builder.add("reservoir.MemoryMappedFileStorageAccessor.file." + i + ".path", folder.newFile().getPath());
         }
-        builder.set("times", "500000");
+        builder.add("times", "500000");
 
         testUpdateMultiThread("MemoryMappedFileStorageAccessorTest", builder.build(),
                 new MemoryMappedFileStorageAccessor<Integer, String>());
@@ -105,14 +105,14 @@ public class AbstractBlockedByteStorageAccessorPerfTest {
     @Test
     public void testFileCacheAccessor() throws Exception {
         PropertiesSupport.PropertiesBuilder builder = PropertiesSupport.builder();
-        builder.set("reservoir.FileStorageAccessor.blockSize", String.valueOf(blockSize));
-        builder.set("reservoir.FileStorageAccessor.coder", "net.ihiroky.reservoir.coder.SimpleStringCoder");
+        builder.add("reservoir.FileStorageAccessor.blockSize", String.valueOf(blockSize));
+        builder.add("reservoir.FileStorageAccessor.coder", "net.ihiroky.reservoir.coder.SimpleStringCoder");
         int partitionSize = size / partitions;
         for (int i = 0; i < partitions; i++) {
-            builder.set("reservoir.FileStorageAccessor.file." + i + ".size", String.valueOf(partitionSize));
-            builder.set("reservoir.FileStorageAccessor.file." + i + ".path", folder.newFile().getPath());
+            builder.add("reservoir.FileStorageAccessor.file." + i + ".size", String.valueOf(partitionSize));
+            builder.add("reservoir.FileStorageAccessor.file." + i + ".path", folder.newFile().getPath());
         }
-        builder.set("times", "150000");
+        builder.add("times", "150000");
 
         testUpdateMultiThread("FileStorageAccessor", builder.build(),
                 new FileStorageAccessor<Integer, String>());

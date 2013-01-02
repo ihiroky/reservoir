@@ -3,14 +3,22 @@ package net.ihiroky.reservoir;
 import javax.management.MXBean;
 
 /**
- * Created on 12/10/18, 18:34
+ * This class defines a interface of Queue MBean.
  *
  * @author Hiroki Itoh
  */
 @MXBean
 public interface QueueMBean {
 
+    /**
+     * Returns a name of this queue.
+     * @return a name of this queue
+     */
     String getName();
 
+    /**
+     * Returns the number of elements in this queue.
+     * @return the number of elements in this queue
+     */
     int size();
 }
