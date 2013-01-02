@@ -44,7 +44,7 @@ task cobertura(type: Test) {
 
     exclude '**/*PerfTest.class'
 
-    jvmArgs "-Dnet.sourceforge.cobertura.datafile=${coberturaDataFile}"
+    jvmArgs '-XX:-UseSplitVerifier', '-Dnet.sourceforge.cobertura.datafile=${coberturaDataFile}'
     testReportDir = coberturaJUnitResultDir
     testResultsDir = coberturaJUnitResultDir
 
