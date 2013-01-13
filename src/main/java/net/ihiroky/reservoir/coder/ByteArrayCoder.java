@@ -11,21 +11,47 @@ import java.nio.ByteBuffer;
 import java.util.Properties;
 
 /**
- * Created on 12/10/17, 10:35
+ * A {@link net.ihiroky.reservoir.Coder} implementation to encode and decode a byte array.
+ * A Byte array is stored to a storage directly as much as possible.
+ *
+ * This class supports {@link net.ihiroky.reservoir.coder.CompressionSupport}.
+ * To be enable compression / decompression, set the property {@code reservoir.ByteArrayCoder.compress.enabled}
+ * on true. See {@link net.ihiroky.reservoir.coder.CompressionSupport} for detail.
  *
  * @author Hiroki Itoh
  */
 public class ByteArrayCoder implements Coder<byte[]> {
 
+    /** a compression and decompression support object */
     private CompressionSupport compressionSupport = new CompressionSupport();
+
+    /** an initial buffer size on compresing an input byte array */
     private int initialByteSize = DEFAULT_INITIAL_BYTE_SIZE;
 
+    /** a property key prefix */
     private static final String KEY_PREFIX = "reservoir.ByteArrayCoder";
+
+    /** a property key for {@code initialByteSize} */
     private static final String KEY_INIT_BYTE_SIZE = KEY_PREFIX.concat(".initByteSize");
 
+    /** default {@code initialByteSize} */
     private static final int DEFAULT_INITIAL_BYTE_SIZE = 512;
+
+    /** minimum {@code initialByteSize} */
     private static final int MIN_INITIAL_BYTE_SIZE = 16;
 
+    /**
+     * Initializes this object.
+     * <ul>
+     *     <li>{@code reservoir.ByteArrayCoder.initByteSize}</li>
+     *       An initial buffer size on compressing an input byte array. Default value is 512.
+     *     <li>{@code reservoir.ByteArrayCoder.compress.enabled}</li>
+     *     <li>{@code reservoir.ByteArrayCoder.compress.level}</li>
+     * </ul>
+     * See {@link net.ihiroky.reservoir.coder.CompressionSupport} for detail.
+     *
+     * @param props properties containing initialization parameters
+     */
     @Override
     public void init(Properties props) {
         compressionSupport.loadProperties(props, KEY_PREFIX);
@@ -36,24 +62,30 @@ public class ByteArrayCoder implements Coder<byte[]> {
         this.initialByteSize = initialByteSize;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public Encoder<byte[]> createEncoder() {
         return new ByteArrayEncoder();
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public Decoder<byte[]> createDecoder() {
         return new ByteArrayDecoder();
     }
 
-    static byte[] expand(byte[] original) {
-        byte[] t = new byte[original.length / 2 * 3];
-        System.arraycopy(original, 0, t, 0, original.length);
-        return t;
-    }
-
+    /**
+     * A {@link net.ihiroky.reservoir.Coder.Encoder} implementation to handle bytes array.
+     */
     class ByteArrayEncoder implements Encoder<byte[]> {
 
+        /**
+         * {@inheritDoc}
+         */
         @Override
         public ByteBuffer encode(byte[] value) {
             if (!compressionSupport.isEnabled()) {
@@ -78,8 +110,14 @@ public class ByteArrayCoder implements Coder<byte[]> {
         }
     }
 
+    /**
+     * A {@link net.ihiroky.reservoir.Coder.Decoder} implementation to handle bytes array.
+     */
     class ByteArrayDecoder implements Decoder<byte[]> {
 
+        /**
+         * {@inheritDoc}
+         */
         @Override
         public byte[] decode(ByteBuffer byteBuffer) {
             if (!compressionSupport.isEnabled()) {
@@ -101,7 +139,6 @@ public class ByteArrayCoder implements Coder<byte[]> {
             InputStream in = new ByteArrayInputStream(
                     bytes, offset + CoderStream.bytesLength(decodedLength), encodedLength);
             byte[] buffer = new byte[decodedLength];
-            int readTotal = 0;
             InputStream wrapper = compressionSupport.createInputStreamIfEnabled(in);
             try {
                 wrapper.read(buffer, 0, decodedLength);

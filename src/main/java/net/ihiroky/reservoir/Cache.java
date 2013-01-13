@@ -12,6 +12,8 @@ import java.util.Map;
  * {@link net.ihiroky.reservoir.CacheEventListener} registered by
  * {@link net.ihiroky.reservoir.Cache#addEventListener(CacheEventListener)}.
  *
+ * @param <K> the type of keys maintained by this cache.
+ * @param <V> the type of mapped values.
  * @author Hiroki Itoh
  */
 public interface Cache<K, V> extends CacheMBean, Iterable<Map.Entry<K, V>> {

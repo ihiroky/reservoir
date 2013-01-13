@@ -141,18 +141,18 @@ public class RestServerTest {
     @Test
     public void testGetXML() throws Exception {
         String result = get(url("1", false), "text/xml");
-        assertThat(result, is("<?xml version=\"1.0\" ?><entries>"
+        assertThat(result, is("<?xml version=\"1.0\" encoding=\"UTF-8\"?><entries>"
                 + "<entry key=\"1\">11</entry>"
                 + "</entries>"));
 
         result = get(url("^[23]$", true), "text/xml");
-        assertThat(result, is("<?xml version=\"1.0\" ?><entries>"
+        assertThat(result, is("<?xml version=\"1.0\" encoding=\"UTF-8\"?><entries>"
                 + "<entry key=\"3\">13</entry>"
                 + "<entry key=\"2\">12</entry>"
                 + "</entries>"));
 
         result = get(url("1", false), "application/xml");
-        assertThat(result, is("<?xml version=\"1.0\" ?><entries>"
+        assertThat(result, is("<?xml version=\"1.0\" encoding=\"UTF-8\"?><entries>"
                 + "<entry key=\"1\">11</entry>"
                 + "</entries>"));
     }
@@ -160,7 +160,7 @@ public class RestServerTest {
     @Test
     public void testPutXML() throws Exception {
         assertThat(integerCache.get(10), is(nullValue()));
-        String content = "<?xml version=\"1.0\" ?><entries>"
+        String content = "<?xml version=\"1.0\" encoding=\"UTF-8\"?><entries>"
                 + "<entry key=\"10\">20</entry>"
                 + "</entries>";
         put(url(null, false), "text/xml", content);
@@ -168,7 +168,7 @@ public class RestServerTest {
 
         assertThat(integerCache.get(11), is(nullValue()));
         assertThat(integerCache.get(12), is(nullValue()));
-        content = "<?xml version=\"1.0\" ?><entries>"
+        content = "<?xml version=\"1.0\" encoding=\"UTF-8\"?><entries>"
                 + "<entry key=\"11\">21</entry>"
                 + "<entry key=\"12\">22</entry>"
                 + "</entries>";
@@ -177,7 +177,7 @@ public class RestServerTest {
         assertThat(integerCache.get(12), is(22));
 
         assertThat(integerCache.get(13), is(nullValue()));
-        content = "<?xml version=\"1.0\" ?><entries>"
+        content = "<?xml version=\"1.0\" encoding=\"UTF-8\"?><entries>"
                 + "<entry key=\"13\">23</entry>"
                 + "</entries>";
         put(url(null, false), "application/xml", content);

@@ -68,50 +68,53 @@ public class ReservoirServiceTest {
         ByteArrayOutputStream result = new ByteArrayOutputStream();
         output.write(result);
         assertThat(result.toString("UTF-8"),
-                is("<?xml version=\"1.0\" ?><entries><entry key=\"2\">12</entry></entries>"));
+                is("<?xml version=\"1.0\" encoding=\"UTF-8\"?><entries><entry key=\"2\">12</entry></entries>"));
 
         output = service.getValueXML(KEY_CACHE_NAME, "-1", false);
         result = new ByteArrayOutputStream();
         output.write(result);
         assertThat(result.toString(),
-                is("<?xml version=\"1.0\" ?><entries></entries>"));
+                is("<?xml version=\"1.0\" encoding=\"UTF-8\"?><entries></entries>"));
 
         output = service.getValueXML(KEY_CACHE_NAME, "[13]", true);
         result = new ByteArrayOutputStream();
         output.write(result);
         assertThat(result.toString(),
-                is("<?xml version=\"1.0\" ?><entries><entry key=\"3\">13</entry><entry key=\"1\">11</entry></entries>"));
+                is("<?xml version=\"1.0\" encoding=\"UTF-8\"?><entries><entry key=\"3\">13</entry><entry key=\"1\">11</entry></entries>"));
 
         output = service.getValueXML(KEY_CACHE_NAME, "[4-9]", true);
         result = new ByteArrayOutputStream();
         output.write(result);
         assertThat(result.toString(),
-                is("<?xml version=\"1.0\" ?><entries></entries>"));
+                is("<?xml version=\"1.0\" encoding=\"UTF-8\"?><entries></entries>"));
     }
 
     @Test
     public void testPutValueXML() throws Exception {
-        ByteArrayInputStream in = new ByteArrayInputStream(("<?xml version=\"1.0\" ?><entries>"
-                + "<entry key=\"13\">23</entry>"
-                + "<entry key=\"11\">21</entry>"
-                + "</entries>").getBytes("UTF-8"));
+        ByteArrayInputStream in = new ByteArrayInputStream(
+                ("<?xml version=\"1.0\" encoding=\"UTF-8\"?><entries>"
+                        + "<entry key=\"13\">23</entry>"
+                        + "<entry key=\"11\">21</entry>"
+                        + "</entries>").getBytes("UTF-8"));
         int beforeSize = integerCache.size();
         service.putValueXML(KEY_CACHE_NAME, in);
         assertThat(integerCache.get(11), is(21));
         assertThat(integerCache.get(13), is(23));
         assertThat(integerCache.size(), is(beforeSize + 2));
 
-        in = new ByteArrayInputStream(("<?xml version=\"1.0\" ?><entries>"
-                + "<entry key=\"12\">22</entry>"
-                + "</entries>").getBytes("UTF-8"));
+        in = new ByteArrayInputStream(
+                ("<?xml version=\"1.0\" encoding=\"UTF-8\"?><entries>"
+                        + "<entry key=\"12\">22</entry>"
+                        + "</entries>").getBytes("UTF-8"));
         beforeSize = integerCache.size();
         service.putValueXML(KEY_CACHE_NAME, in);
         assertThat(integerCache.get(12), is(22));
         assertThat(integerCache.size(), is(beforeSize + 1));
 
 
-        in = new ByteArrayInputStream(("<?xml version=\"1.0\" ?><entries>"
-                + "</entries>").getBytes("UTF-8"));
+        in = new ByteArrayInputStream(
+                ("<?xml version=\"1.0\" encoding=\"UTF-8\"?><entries>"
+                        + "</entries>").getBytes("UTF-8"));
         beforeSize = integerCache.size();
         service.putValueXML(KEY_CACHE_NAME, in);
         assertThat(integerCache.size(), is(beforeSize));
@@ -123,7 +126,8 @@ public class ReservoirServiceTest {
         StreamingOutput output = service.deleteValueXML(KEY_CACHE_NAME, "1", false);
         ByteArrayOutputStream result = new ByteArrayOutputStream();
         output.write(result);
-        assertThat(result.toString(), is("<?xml version=\"1.0\" ?><entries><entry key=\"1\">11</entry></entries>"));
+        assertThat(result.toString(),
+                is("<?xml version=\"1.0\" encoding=\"UTF-8\"?><entries><entry key=\"1\">11</entry></entries>"));
         assertThat(integerCache.get(1), is(nullValue()));
         assertThat(integerCache.size(), is(beforeSize - 1));
 
@@ -131,10 +135,11 @@ public class ReservoirServiceTest {
         output = service.deleteValueXML(KEY_CACHE_NAME, "[02]", true);
         result = new ByteArrayOutputStream();
         output.write(result);
-        assertThat(result.toString(), is("<?xml version=\"1.0\" ?><entries>"
-                + "<entry key=\"2\">12</entry>"
-                + "<entry key=\"0\">10</entry>"
-                + "</entries>"));
+        assertThat(result.toString(),
+                is("<?xml version=\"1.0\" encoding=\"UTF-8\"?><entries>"
+                        + "<entry key=\"2\">12</entry>"
+                        + "<entry key=\"0\">10</entry>"
+                        + "</entries>"));
         assertThat(integerCache.get(0), is(nullValue()));
         assertThat(integerCache.get(2), is(nullValue()));
         assertThat(integerCache.size(), is(beforeSize - 2));
@@ -142,18 +147,19 @@ public class ReservoirServiceTest {
 
     @Test
     public void testDeleteValueXMLByStream() throws Exception {
-        ByteArrayInputStream in = new ByteArrayInputStream(("<?xml version=\"1.0\" ?><entries>"
-                + "<entry key=\"3\" />"
-                + "<entry key=\"1\" />"
-                + "</entries>").getBytes("UTF-8"));
+        ByteArrayInputStream in = new ByteArrayInputStream(
+                ("<?xml version=\"1.0\" encoding=\"UTF-8\"?><entries>"
+                        + "<entry key=\"3\" />"
+                        + "<entry key=\"1\" />"
+                        + "</entries>").getBytes("UTF-8"));
         int beforeSize = integerCache.size();
         service.deleteValueXML(KEY_CACHE_NAME, in);
         assertThat(integerCache.get(1), is(nullValue()));
         assertThat(integerCache.get(3), is(nullValue()));
         assertThat(integerCache.size(), is(beforeSize - 2));
 
-        in = new ByteArrayInputStream(("<?xml version=\"1.0\" ?><entries>"
-                + "</entries>").getBytes("UTF-8"));
+        in = new ByteArrayInputStream(
+                ("<?xml version=\"1.0\" encoding=\"UTF-8\"?><entries>" + "</entries>").getBytes("UTF-8"));
         beforeSize = integerCache.size();
         service.deleteValueXML(KEY_CACHE_NAME, in);
         assertThat(integerCache.size(), is(beforeSize));

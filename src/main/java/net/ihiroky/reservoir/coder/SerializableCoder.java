@@ -10,8 +10,14 @@ import java.nio.ByteBuffer;
 import java.util.Properties;
 
 /**
- * Created on 12/09/28, 13:20
+ * A {@link net.ihiroky.reservoir.Coder} implementation to encode and decode serializable objects.
  *
+ * This class supports {@link net.ihiroky.reservoir.coder.CompressionSupport}.
+ * To be enable compression / decompression, set the property {@code reservoir.SerializableCoder.compress.enabled}
+ * on true. See {@link net.ihiroky.reservoir.coder.CompressionSupport} for detail.
+ *
+ *
+ * @param <V> the type of a serializable object
  * @author Hiroki Itoh
  */
 public class SerializableCoder<V extends Serializable> implements Coder<V> {
@@ -20,29 +26,58 @@ public class SerializableCoder<V extends Serializable> implements Coder<V> {
 
     private static final String KEY_PREFIX = "reservoir.SerializableCoder";
 
+    /**
+     * Initializes this object.
+     * <ul>
+     *     <li>{@code reservoir.SerializableCoder.compress.enabled}</li>
+     *     <li>{@code reservoir.SerializableCoder.compress.level}</li>
+     * </ul>
+     * See {@link net.ihiroky.reservoir.coder.CompressionSupport} for detail.
+     *
+     * @param props properties containing initialization parameters
+     */
     @Override
     public void init(Properties props) {
         compressionSupport.loadProperties(props, KEY_PREFIX);
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public Encoder<V> createEncoder() {
         return new SerializableEncoder<V>(compressionSupport);
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public Decoder<V> createDecoder() {
         return new SerializableDecoder<V>(compressionSupport);
     }
 
+    /**
+     * A {@link net.ihiroky.reservoir.Coder.Encoder} implementation to handle serializable objects.
+     *
+     * @param <V> the type of objects to be encoded ({@code java.io.Serializable})
+     */
     static class SerializableEncoder<V> implements Encoder<V> {
 
+        /** a compression support object */
         CompressionSupport compressionSupport;
 
+        /**
+         * Constructs a new {@code SerializableEncoder}.
+         * @param compressionSupport a compression support object
+         */
         SerializableEncoder(CompressionSupport compressionSupport) {
             this.compressionSupport = compressionSupport;
         }
 
+        /**
+         * {@inheritDoc}
+         */
         @Override
         public ByteBuffer encode(Object value) {
             ByteBufferOutputStream base = new ByteBufferOutputStream(1024);
@@ -65,14 +100,28 @@ public class SerializableCoder<V extends Serializable> implements Coder<V> {
         }
     }
 
+    /**
+     * A {@link net.ihiroky.reservoir.Coder.Decoder} implementation to handle serializable objects.
+     *
+     * @param <V> the type of objects to be decoded into ({@code java.io.Serializable})
+     */
     static class SerializableDecoder<V> implements Decoder<V> {
 
+        /** a compression support object */
         CompressionSupport compressionSupport;
 
+        /**
+         * Constructs a new {@code SerializableCoder}.
+         *
+         * @param compressionSupport a compression support object
+         */
         SerializableDecoder(CompressionSupport compressionSupport) {
             this.compressionSupport = compressionSupport;
         }
 
+        /**
+         * {@inheritDoc}
+         */
         @Override
         @SuppressWarnings("unchecked")
         public V decode(ByteBuffer byteBuffer) {
