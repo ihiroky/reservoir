@@ -8,7 +8,7 @@ import javax.management.MXBean;
  * @author Hiroki Itoh
  */
 @MXBean
-public interface BlockedByteCacheAccessorMBean {
+public interface BlockedByteStorageAccessorMBean {
 
     String getName();
 

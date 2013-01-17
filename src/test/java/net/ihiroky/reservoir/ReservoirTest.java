@@ -293,4 +293,11 @@ public class ReservoirTest {
         }
     }
 
+    @Test
+    public void testMaxDirectBufferCapacity() {
+        System.out.println("MaxDirectMemorySize: " + Reservoir.getMaxDirectMemorySize());
+        System.out.println("DirectBufferCapacity: " + Reservoir.getMaxDirectBufferCapacity());
+        System.out.println("Integer.MAX_VALUE   : " + Integer.MAX_VALUE);
+
+    }
 }

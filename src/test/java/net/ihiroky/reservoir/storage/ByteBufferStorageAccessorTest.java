@@ -1,10 +1,10 @@
 package net.ihiroky.reservoir.storage;
 
-import net.ihiroky.reservoir.StorageAccessor;
 import net.ihiroky.reservoir.Index;
 import net.ihiroky.reservoir.PropertiesSupport;
 import net.ihiroky.reservoir.Ref;
 import net.ihiroky.reservoir.Reservoir;
+import net.ihiroky.reservoir.StorageAccessor;
 import net.ihiroky.reservoir.index.SimpleIndex;
 import org.junit.After;
 import org.junit.Before;
@@ -68,15 +68,15 @@ public class ByteBufferStorageAccessorTest {
     @Test
     public void testPrepare() {
         Properties props2 = PropertiesSupport.builder()
-                .add(ByteBufferStorageAccessor.class, "blockSize", "8")
-                .add(ByteBufferStorageAccessor.class, "partition.1.direct", "true")
-                .add(ByteBufferStorageAccessor.class, "partition.1.capacity", "16")
-                .add(ByteBufferStorageAccessor.class, "partition.2.direct", "true")
-                .add(ByteBufferStorageAccessor.class, "partition.2.capacity", "16")
-                .add(ByteBufferStorageAccessor.class, "partition.3.direct", "true")
-                .add(ByteBufferStorageAccessor.class, "partition.3.capacity", "16")
-                .add(ByteBufferStorageAccessor.class, "partition.4.direct", "true")
-                .add(ByteBufferStorageAccessor.class, "partition.4.capacity", "16")
+                .put(ByteBufferStorageAccessor.class, "blockSize", "8")
+                .put(ByteBufferStorageAccessor.class, "partition.1.direct", "true")
+                .put(ByteBufferStorageAccessor.class, "partition.1.capacity", "16")
+                .put(ByteBufferStorageAccessor.class, "partition.2.direct", "true")
+                .put(ByteBufferStorageAccessor.class, "partition.2.capacity", "16")
+                .put(ByteBufferStorageAccessor.class, "partition.3.direct", "true")
+                .put(ByteBufferStorageAccessor.class, "partition.3.capacity", "16")
+                .put(ByteBufferStorageAccessor.class, "partition.4.direct", "true")
+                .put(ByteBufferStorageAccessor.class, "partition.4.capacity", "16")
                 .build();
 
         ByteBufferStorageAccessor<Integer, String> instance = new ByteBufferStorageAccessor<Integer, String>();
@@ -93,10 +93,10 @@ public class ByteBufferStorageAccessorTest {
     @Test
     public void testPrepareUsagePercent() {
         Properties props2 = PropertiesSupport.builder()
-                .add(ByteBufferStorageAccessor.class, "direct", "true")
-                .add(ByteBufferStorageAccessor.class, "usagePercent", "10")
-                .add(ByteBufferStorageAccessor.class, "blockSize", "256")
-                .add(ByteBufferStorageAccessor.class, "partitions", "1")
+                .put(ByteBufferStorageAccessor.class, "direct", "true")
+                .put(ByteBufferStorageAccessor.class, "usagePercent", "10")
+                .put(ByteBufferStorageAccessor.class, "blockSize", "256")
+                .put(ByteBufferStorageAccessor.class, "partitions", "1")
                 .build();
 
         ByteBufferStorageAccessor<Integer, String> instance = new ByteBufferStorageAccessor<Integer, String>();
@@ -105,6 +105,27 @@ public class ByteBufferStorageAccessorTest {
         assertThat(instance.getWholeBlocks(), is(Reservoir.getMaxDirectMemorySize() / 256 / 10));
         assertThat(instance.getBlockSize(), is(256));
         assertThat(instance.getPartitions(), is(1));
+    }
+
+    @Test
+    public void testPreparePartitionCapacityDirect() {
+        Properties props2 = PropertiesSupport.builder()
+                .put(ByteBufferStorageAccessor.class, "blockSize", "8")
+                .put(ByteBufferStorageAccessor.class, "partition.1.direct", "true")
+                .put(ByteBufferStorageAccessor.class, "partition.1.capacity", Integer.toString(Integer.MAX_VALUE))
+                .build();
+
+        ByteBufferStorageAccessor<Integer, String> instance = new ByteBufferStorageAccessor<Integer, String>();
+        disposeSet.add(instance);
+        try {
+            instance.prepare("ByteBufferStorageAccessorTest#tesPreparePartitionCapacityDirect", props2);
+            fail();
+        } catch (IllegalArgumentException e) {
+            // "Partition size violation. Max capacity per ByteBuffer is [0-9]+ at index 1"
+            assertThat(e.getMessage(), is(
+                    both(startsWith("Partition size violation. Max capacity per ByteBuffer is "))
+                            .and(endsWith(" at index 1"))));
+        }
     }
 
     @Test

@@ -1,20 +1,20 @@
 package net.ihiroky.reservoir;
 
-import net.ihiroky.reservoir.storage.BulkInfo;
-import net.ihiroky.reservoir.storage.ByteBufferStorageAccessor;
-import net.ihiroky.reservoir.storage.ByteBufferInfo;
-import net.ihiroky.reservoir.storage.FileStorageAccessor;
-import net.ihiroky.reservoir.storage.FileInfo;
-import net.ihiroky.reservoir.storage.HeapStorageAccessor;
-import net.ihiroky.reservoir.storage.MemoryMappedFileStorageAccessor;
-import net.ihiroky.reservoir.storage.RejectedAllocationHandler;
-import net.ihiroky.reservoir.storage.RejectedAllocationPolicy;
 import net.ihiroky.reservoir.coder.SerializableCoder;
 import net.ihiroky.reservoir.index.ConcurrentFIFOIndex;
 import net.ihiroky.reservoir.index.ConcurrentLRUIndex;
 import net.ihiroky.reservoir.index.FIFOIndex;
 import net.ihiroky.reservoir.index.LRUIndex;
 import net.ihiroky.reservoir.index.SimpleIndex;
+import net.ihiroky.reservoir.storage.BulkInfo;
+import net.ihiroky.reservoir.storage.ByteBufferInfo;
+import net.ihiroky.reservoir.storage.ByteBufferStorageAccessor;
+import net.ihiroky.reservoir.storage.FileInfo;
+import net.ihiroky.reservoir.storage.FileStorageAccessor;
+import net.ihiroky.reservoir.storage.HeapStorageAccessor;
+import net.ihiroky.reservoir.storage.MemoryMappedFileStorageAccessor;
+import net.ihiroky.reservoir.storage.RejectedAllocationHandler;
+import net.ihiroky.reservoir.storage.RejectedAllocationPolicy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -22,6 +22,7 @@ import java.io.File;
 import java.io.IOException;
 import java.lang.management.ManagementFactory;
 import java.lang.management.RuntimeMXBean;
+import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
@@ -288,26 +289,80 @@ public final class Reservoir {
     /**
      * Provides for variables which is lazily initialized.
      * In short, lazy initialization holder class idiom.
+     *
+     * TODO set DEFAULT_PAGE_SIZE from configurations.
      */
     private static class LazyInitializationFieldHolder {
 
-        /** The value of the JVM option -XX:MaxDirectMemorySize */
-        static long MAX_DIRECT_MEMORY_SIZE = parseMaxDirectMemoryValue();
+        static long maxDirectMemorySize = getMaxDirectMemorySize();
+        static int maxDirectBufferCapacity = maxDirectBufferCapacity();
 
-        /** The string of "-XX:MaxDirectMemorySize" */
-        static final String KEY_MAX_DIRECT_MEMORY_SIZE = "-XX:MaxDirectMemorySize";
+        private static final String KEY_MAX_DIRECT_MEMORY_SIZE = "-XX:MaxDirectMemorySize";
+        private static final int DEFAULT_PAGE_SIZE = 4096; // TODO set by configuration
+        private static final int USABLE_DIRECT_MEMORY_ON_32 = 1856 * 1024 * 1024;
+
+        // the max value of MaxDirectMemorySize on Solaris10 32 bit jvm is 2^31 - 1 bytes.
+        // the max value of usable MaxDirectMemorySize on Solaris10 32 bit jvm is 1856MB.
+
+        /**
+         * Returns the max direct memory size. If sun.misc.VM is available,
+         * use system setting; otherwise use the value of JVM option or DEFAULT_DIRECT_MEMORY_SIZE.
+         * @return the max direct memory size.
+         */
+        static long getMaxDirectMemorySize() {
+            try {
+                return getSystemMaxDirectMemorySize();
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+            return parseArgumentMaxDirectMemorySize();
+        }
+
+        /**
+         * Returns direct memory size that {@code java.nio.ByteBuffer#allocateDirect(int)} is successfully called.
+         * @return direct memory size per {@code java.nio.ByteBuffer} instance
+         */
+        static int maxDirectBufferCapacity() {
+            int pageSize = getPageSize();
+            if (is32Bit()) {
+                int allocatableSize = (int) maxDirectMemorySize - pageSize;
+                return (allocatableSize <= USABLE_DIRECT_MEMORY_ON_32) ? allocatableSize : USABLE_DIRECT_MEMORY_ON_32;
+            }
+            return (maxDirectMemorySize <= Integer.MAX_VALUE)
+                    ? (int) maxDirectMemorySize - pageSize : Integer.MAX_VALUE - pageSize;
+        }
+
+        /**
+         * Returns true if jvm architecture is 32 bits.
+         * @return true if jvm architecture is 32 bits
+         */
+        static boolean is32Bit() {
+            String s = System.getProperty("sun.arch.data.model");
+            if (s != null) {
+                return s.equals("32");
+            }
+            s = System.getProperty("java.vm.name");
+            if (s != null) {
+                return !s.contains("64");
+            }
+            s = System.getProperty("os.arch");
+            if (s != null) {
+                return !s.contains("64");
+            }
+            throw new RuntimeException("failed to judge jvm architecture.");
+        }
 
         /**
          * Returns the value of the JVM option "-XX:MaxDirectMemorySize".
          * @return the value of the JVM option "-XX:MaxDirectMemorySize"
          */
-        static long parseMaxDirectMemoryValue() {
+        static long parseArgumentMaxDirectMemorySize() {
             RuntimeMXBean bean = ManagementFactory.getRuntimeMXBean();
             for (String inputArgument : bean.getInputArguments()) {
                 if (inputArgument.startsWith(KEY_MAX_DIRECT_MEMORY_SIZE)) {
                     int eq = inputArgument.indexOf('=');
                     if (eq == -1) {
-
+                        return DEFAULT_DIRECT_MEMORY_SIZE;
                     }
                     int tail = inputArgument.length() - 1;
                     char unitMark = Character.toUpperCase(inputArgument.charAt(tail));
@@ -328,6 +383,49 @@ public final class Reservoir {
             }
             return DEFAULT_DIRECT_MEMORY_SIZE;
         }
+
+        /**
+         * Returns max direct memory size configured by the system.
+         * @return max direct memory size configured by the system
+         */
+        static long getSystemMaxDirectMemorySize() {
+            try {
+                Class<?> c = Class.forName("sun.misc.VM");
+                Method m = c.getDeclaredMethod("maxDirectMemory");
+                return (Long) m.invoke(null);
+            } catch (Exception e) {
+                throw new RuntimeException("failed to call sun.misc.VM#maxDirectMemory()", e);
+            }
+        }
+
+        /**
+         * Returns the page size. If {@code java.nio.Bits#pageSize()} is available, use system setting;
+         * otherwise use {@code DEFAULT_PAGE_SIZE}.
+         * @return the page size
+         */
+        static int getPageSize() {
+            try {
+                return getSystemPageSize();
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+            return DEFAULT_PAGE_SIZE;
+        }
+
+        /**
+         * Returns the system page size
+         * @return
+         */
+        static int getSystemPageSize() {
+            try {
+                Class<?> c = Class.forName("java.nio.Bits");
+                Method m = c.getDeclaredMethod("pageSize");
+                m.setAccessible(true);
+                return (Integer) m.invoke(null);
+            } catch (Exception e) {
+                throw new RuntimeException("failed to call java.nio.Bits#pageSize()", e);
+            }
+        }
     }
 
     /**
@@ -335,7 +433,15 @@ public final class Reservoir {
      * @return the value of the JVM option "-XX:MaxDirectMemorySize"
      */
     public static long getMaxDirectMemorySize() {
-        return LazyInitializationFieldHolder.MAX_DIRECT_MEMORY_SIZE;
+        return LazyInitializationFieldHolder.maxDirectMemorySize;
+    }
+
+    /**
+     * Returns the capacity per direct buffer.
+     * @return the capacity per direct buffer
+     */
+    public static int getMaxDirectBufferCapacity() {
+        return LazyInitializationFieldHolder.maxDirectBufferCapacity;
     }
 
     /**

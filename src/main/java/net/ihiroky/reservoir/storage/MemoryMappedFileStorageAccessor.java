@@ -18,21 +18,21 @@ import java.util.Collections;
  * @author Hiroki Itoh
  */
 public class MemoryMappedFileStorageAccessor<K, V>
-        extends FileStorageAccessor<K, V> implements MemoryMappedFileCacheAccessorMBean {
+        extends FileStorageAccessor<K, V> implements MemoryMappedFileStorageAccessorMBean {
 
     private Collection<MappedByteBuffer> mappedByteBuffers = Collections.emptyList();
     private Logger logger = LoggerFactory.getLogger(FileStorageAccessor.class);
 
     @Override
     protected long getMaxPartitionSize(int blockSize) {
-        return ByteBufferStorageAccessor.maxPartitionSize(blockSize);
+        return ByteBufferStorageAccessor.maxPartitionSize(blockSize, true);
     }
 
     @Override
     protected ByteBlockManager createInstance(
             String name, File file, RandomAccessFile randomAccessFile, int blockSize) throws IOException {
         long size = randomAccessFile.length();
-        final int maxPartitionSize = ByteBufferStorageAccessor.maxPartitionSize(blockSize);
+        final int maxPartitionSize = ByteBufferStorageAccessor.maxPartitionSize(blockSize, true);
         if (size > maxPartitionSize) {
             size = maxPartitionSize;
             randomAccessFile.setLength(size);

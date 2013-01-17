@@ -24,7 +24,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
  * @author Hiroki Itoh
  */
 public abstract class AbstractBlockedByteStorageAccessor<K, V>
-        implements StorageAccessor<K, V>, BlockedByteCacheAccessorMBean {
+        implements StorageAccessor<K, V>, BlockedByteStorageAccessorMBean {
 
     private String name;
     private volatile ByteBlockManager[] byteBlockManagers;

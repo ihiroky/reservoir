@@ -31,7 +31,7 @@ public class SimpleStringCoderTest {
     public void testCompress() {
         SimpleStringCoder coder = new SimpleStringCoder();
         coder.init(PropertiesSupport.builder()
-                .add(SimpleStringCoder.class, "compress.enabled", "true").build());
+                .put(SimpleStringCoder.class, "compress.enabled", "true").build());
         Coder.Encoder<String> encoder = coder.createEncoder();
         Coder.Decoder<String> decoder = coder.createDecoder();
         char[] a = new char[512];

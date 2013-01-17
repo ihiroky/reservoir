@@ -168,24 +168,24 @@ public final class PropertiesSupport {
         }
 
         /**
-         * Adds key and value into a {@code java.util.Properties} to build.
+         * Puts key and value into a {@code java.util.Properties} to build.
          * @param key a key associated with {@code value}
          * @param value a value against {@code key}
          * @return this instance
          */
-        public PropertiesBuilder add(String key, String value) {
+        public PropertiesBuilder put(String key, String value) {
             props.setProperty(key, value);
             return this;
         }
 
         /**
-         * Adds key in a specified class and value into a {@code java.util.Properties} to build.
+         * Puts key in a specified class and value into a {@code java.util.Properties} to build.
          * @param cls a class object which contains {@code key}
          * @param key a key defined in {@code cls}
          * @param value a value against a specified key.
          * @return this instance
          */
-        public PropertiesBuilder add(Class<?> cls, String key, String value) {
+        public PropertiesBuilder put(Class<?> cls, String key, String value) {
             props.setProperty(key(cls, key), value);
             return this;
         }

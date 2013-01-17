@@ -38,8 +38,8 @@ public class ByteBufferStorageAccessor<K, V> extends AbstractBlockedByteStorageA
     private static final int DEFAULT_BLOCK_SIZE = 512;
     private static final int DEFAULT_PARTITIONS = 1;
 
-    static int maxPartitionSize(int blockSize) {
-        return (Integer.MAX_VALUE / blockSize) * blockSize;
+    static int maxPartitionSize(int blockSize, boolean direct) {
+        return ((direct ? Reservoir.getMaxDirectBufferCapacity() : Integer.MAX_VALUE) / blockSize) * blockSize;
     }
 
     public void prepare(String name, int blockSize, Coder<V> coder, Collection<ByteBufferInfo> byteBufferInfos,
@@ -86,7 +86,7 @@ public class ByteBufferStorageAccessor<K, V> extends AbstractBlockedByteStorageA
                 return bbb;
             }
         };
-        int maxPartitionSize = maxPartitionSize(bulkInfo.blockSize);
+        int maxPartitionSize = maxPartitionSize(bulkInfo.blockSize, direct);
         ByteBlockManager[] managers = bulkInfo.allocate(allocator, maxPartitionSize);
         prepare(name, managers, bulkInfo.blockSize, coder, rejectedAllocationHandler);
     }
@@ -99,7 +99,7 @@ public class ByteBufferStorageAccessor<K, V> extends AbstractBlockedByteStorageA
         coder.init(props);
         final String rah = props.getProperty(KEY_REJECTED_ALLOCATION_HANDLER);
 
-        Collection<ByteBufferInfo> byteBufferInfos = parseByteBufferInfo(props);
+        Collection<ByteBufferInfo> byteBufferInfos = parseByteBufferInfo(props, blockSize);
         if (byteBufferInfos.size() > 0) {
             prepare(name, blockSize, coder, byteBufferInfos, createRejectedAllocationHandler(rah));
             return;
@@ -115,7 +115,7 @@ public class ByteBufferStorageAccessor<K, V> extends AbstractBlockedByteStorageA
         prepare(name, direct, coder, bulkInfo, createRejectedAllocationHandler(rah));
     }
 
-    private Collection<ByteBufferInfo> parseByteBufferInfo(Properties props) {
+    private Collection<ByteBufferInfo> parseByteBufferInfo(Properties props, int blockSize) {
         String byPartitionPrefix = PropertiesSupport.key(ByteBufferStorageAccessor.class, KEY_PARTITION_PREFIX);
         Map<Integer, ByteBufferInfo> infoMap = new TreeMap<Integer, ByteBufferInfo>();
         for (String key : props.stringPropertyNames()) {
@@ -143,7 +143,35 @@ public class ByteBufferStorageAccessor<K, V> extends AbstractBlockedByteStorageA
                 throw new IllegalArgumentException("failed to parse property. key:" + key + ", value:" + value, nfe);
             }
         }
+        for (Map.Entry<Integer, ByteBufferInfo> entry : infoMap.entrySet()) {
+            ByteBufferInfo byteBufferInfo = entry.getValue();
+            int maxPartitionSize = maxPartitionSize(blockSize, byteBufferInfo.direct);
+            if (byteBufferInfo.capacity > maxPartitionSize(blockSize, byteBufferInfo.direct)) {
+                throw new IllegalArgumentException(
+                        "Partition size violation. Max capacity per ByteBuffer is "
+                                + maxPartitionSize + " at index " + entry.getKey());
+            }
+        }
         return infoMap.isEmpty()
                 ? Collections.<ByteBufferInfo>emptyList() : new ArrayList<ByteBufferInfo>(infoMap.values());
+    }
+
+    public static void main(String[] args) {
+        long capacity = 3L * 1024 * 1024 * 1024;
+        int blockSize = 512;
+        Properties props = PropertiesSupport.builder()
+                .put("reservoir.ByteBufferStorageAccessor.direct", "true")
+                .put("reservoir.ByteBufferStorageAccessor.size", Long.toString(capacity))
+                .put("reservoir.ByteBufferStorageAccessor.blockSize", Integer.toString(blockSize))
+                .put("reservoir.ByteBufferStorageAccessor.partitions", "1")
+                .put("reservoir.ByteBufferStorageAccessor.coder", "net.ihiroky.reservoir.coder.StringCoder")
+                .build();
+
+        ByteBufferStorageAccessor<Object, String> a = new ByteBufferStorageAccessor<Object, String>();
+        a.prepare(ByteBufferStorageAccessor.class.getName() + "#main", props);
+        long expected = capacity / blockSize;
+        System.out.println("whole blocks  : " + a.getWholeBlocks());
+        System.out.println("logical blocks: " + expected);
+        assert a.getWholeBlocks() == expected;
     }
 }

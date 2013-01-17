@@ -8,6 +8,6 @@ import javax.management.MXBean;
  * @author Hiroki Itoh
  */
 @MXBean
-public interface MemoryMappedFileCacheAccessorMBean extends BlockedByteCacheAccessorMBean {
+public interface MemoryMappedFileStorageAccessorMBean extends BlockedByteStorageAccessorMBean {
     void sync();
 }
