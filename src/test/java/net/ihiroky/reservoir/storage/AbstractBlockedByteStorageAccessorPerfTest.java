@@ -74,7 +74,7 @@ public class AbstractBlockedByteStorageAccessorPerfTest {
     @Test
     public void testByteBufferCacheAccessor() throws Exception {
         Properties props = PropertiesSupport.builder()
-                .put("reservoir.ByteBufferStorageAccessor.direct", "false")
+                .put("reservoir.ByteBufferStorageAccessor.direct", "true")
                 .put("reservoir.ByteBufferStorageAccessor.size", String.valueOf(size))
                 .put("reservoir.ByteBufferStorageAccessor.blockSize", String.valueOf(blockSize))
                 .put("reservoir.ByteBufferStorageAccessor.partitions", String.valueOf(partitions))

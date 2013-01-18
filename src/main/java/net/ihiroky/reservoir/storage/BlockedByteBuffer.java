@@ -1,5 +1,6 @@
 package net.ihiroky.reservoir.storage;
 
+import java.lang.reflect.Method;
 import java.nio.ByteBuffer;
 import java.util.LinkedList;
 import java.util.List;
@@ -83,6 +84,7 @@ public class BlockedByteBuffer implements BlockedByteBufferMBean, ByteBlockManag
     public synchronized void free() {
         freeHeadIndex = freeTailIndex = 0;
         allocatedBlocks = 0;
+        release(byteBuffer, false);
     }
 
     private int nextIndex(int index) {
@@ -258,6 +260,23 @@ public class BlockedByteBuffer implements BlockedByteBufferMBean, ByteBlockManag
                 }
             }
             return valid ? written : -1;
+        }
+    }
+
+    private void release(ByteBuffer bb, boolean force) {
+        if (bb == null || !bb.isDirect()) {
+            return;
+        }
+
+        try {
+            // Call dynamically to prevent ClassNotFoundException for non-sun jvm
+            Class<?> c = Class.forName("net.ihiroky.reservoir.storage.DirectByteBufferCleaner");
+            Method m = c.getDeclaredMethod("clean", ByteBuffer.class);
+            m.invoke(null, bb);
+        } catch (Throwable ignored) {
+            if (force) {
+                System.gc();
+            }
         }
     }
 }
