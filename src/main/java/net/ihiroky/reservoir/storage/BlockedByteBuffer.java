@@ -1,7 +1,18 @@
 package net.ihiroky.reservoir.storage;
 
+import java.lang.management.BufferPoolMXBean;
+import java.lang.management.ManagementFactory;
 import java.lang.reflect.Method;
 import java.nio.ByteBuffer;
+import java.nio.MappedByteBuffer;
+import java.nio.channels.FileChannel;
+import java.nio.file.Files;
+import java.nio.file.OpenOption;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardOpenOption;
+import java.util.Arrays;
+import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -263,7 +274,7 @@ public class BlockedByteBuffer implements BlockedByteBufferMBean, ByteBlockManag
         }
     }
 
-    private void release(ByteBuffer bb, boolean force) {
+    private static void release(ByteBuffer bb, boolean force) {
         if (bb == null || !bb.isDirect()) {
             return;
         }
@@ -277,6 +288,66 @@ public class BlockedByteBuffer implements BlockedByteBufferMBean, ByteBlockManag
             if (force) {
                 System.gc();
             }
+        }
+    }
+
+    public static void main(String[] args) {
+        List<BufferPoolMXBean> mxBeans = ManagementFactory.getPlatformMXBeans(BufferPoolMXBean.class);
+        Path tmp = Paths.get("/tmp/DirectByteBufferAllocationTest");
+        FileChannel fc = null;
+        try {
+            Files.write(tmp, new byte[]{0, 0, 0, 0, 0, 0, 0, 0});
+
+            print("before allocation", mxBeans);
+            ByteBuffer direct = ByteBuffer.allocateDirect(64 * 1024 * 1024);
+            fc = FileChannel.open(tmp,
+                    new HashSet<OpenOption>(Arrays.asList(StandardOpenOption.READ, StandardOpenOption.WRITE)));
+            MappedByteBuffer mapped = fc.map(FileChannel.MapMode.READ_WRITE, 0, fc.size());
+            System.out.println(direct);
+            System.out.println(mapped);
+            print("after allocation", mxBeans);
+
+            direct = null;
+            mapped = null;
+            fc.close();
+            System.gc();
+            print("after gc 1", mxBeans);
+
+            System.gc();
+            print("after gc 2", mxBeans);
+
+            System.gc();
+            print("after gc 3", mxBeans);
+
+            direct = ByteBuffer.allocateDirect(64 * 1024 * 1024);
+            fc = FileChannel.open(tmp,
+                    new HashSet<OpenOption>(Arrays.asList(StandardOpenOption.READ, StandardOpenOption.WRITE)));
+            mapped = fc.map(FileChannel.MapMode.READ_WRITE, 0, fc.size());
+            print("after allocation", mxBeans);
+
+            fc.close();
+            release(direct, false);
+            release(mapped, false);
+            print("after release", mxBeans);
+        } catch (Exception e) {
+            e.printStackTrace();
+            if (fc != null) {
+                try {
+                    fc.close();
+                } catch (Exception ex) {
+                    ex.printStackTrace();
+                }
+            }
+        }
+    }
+
+    static void print(String comment, List<BufferPoolMXBean> mxBeans) {
+        System.out.println(comment);
+        for (BufferPoolMXBean mxBean : mxBeans) {
+            System.out.println(" name: " + mxBean.getName());
+            System.out.println("  count: " + mxBean.getCount());
+            System.out.println("  used: " + mxBean.getMemoryUsed());
+            System.out.println("  capacity: " + mxBean.getTotalCapacity());
         }
     }
 }
