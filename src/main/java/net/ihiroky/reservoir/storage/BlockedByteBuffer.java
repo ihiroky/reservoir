@@ -291,6 +291,10 @@ public class BlockedByteBuffer implements BlockedByteBufferMBean, ByteBlockManag
         }
     }
 
+    /**
+     * Confirms direct buffer is released by the System.gc() or release().
+     * @param args no arguments is required
+     */
     public static void main(String[] args) {
         List<BufferPoolMXBean> mxBeans = ManagementFactory.getPlatformMXBeans(BufferPoolMXBean.class);
         Path tmp = Paths.get("/tmp/DirectByteBufferAllocationTest");

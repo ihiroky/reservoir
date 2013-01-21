@@ -7,37 +7,32 @@ public class BulkInfo {
 
     final long size;
     final int blockSize;
-    final int partitionsHint;
+    final int partitions;
 
-    public BulkInfo(long size, int blockSize, int partitionsHint) {
+    public BulkInfo(long size, int blockSize, int partitions) {
         if (size < blockSize
                 || blockSize < BlockedByteBuffer.MIN_BYTES_PER_BLOCK
-                || partitionsHint <= 0) {
+                || partitions <= 0) {
             throw new IllegalArgumentException();
         }
 
         this.size = size;
         this.blockSize = blockSize;
-        this.partitionsHint = partitionsHint;
+        this.partitions = partitions;
     }
 
     ByteBlockManager[] allocate(ByteBlockManagerAllocator allocator, long maxPartitionSize) {
-        final long partitionSizeHint = size / partitionsHint;
-        long left = size;
-        long partitionSize = (partitionSizeHint < maxPartitionSize) ? (int) partitionSizeHint : maxPartitionSize;
-        if (partitionSize < blockSize) {
-            partitionSize = blockSize;
+        long partitionSizeHint = size / partitions;
+        if (partitionSizeHint > maxPartitionSize) {
+            partitionSizeHint = maxPartitionSize;
         }
-
-        int partitions = (int) (size / partitionSize + ((size % partitionSize != 0) ? 1 : 0));
+        if (partitionSizeHint < blockSize) {
+            partitionSizeHint = blockSize;
+        }
+        long partitionSize = (partitionSizeHint / blockSize) * blockSize;
         ByteBlockManager[] byteBlockManagers = new ByteBlockManager[partitions];
         for (int i = 0; i < partitions; i++) {
-            long bbbSize = (left >= partitionSize) ? partitionSize : left;
-            if (bbbSize < blockSize) {
-                bbbSize = blockSize;
-            }
-            byteBlockManagers[i] = allocator.allocate(bbbSize, blockSize, i);
-            left -= bbbSize;
+            byteBlockManagers[i] = allocator.allocate(partitionSize, blockSize, i);
         }
         return byteBlockManagers;
     }
@@ -48,6 +43,6 @@ public class BulkInfo {
 
     @Override
     public String toString() {
-        return "size:" + size + ", blockSize:" + blockSize + ", partitionsHint:" + partitionsHint;
+        return "size:" + size + ", blockSize:" + blockSize + ", partitions:" + partitions;
     }
 }

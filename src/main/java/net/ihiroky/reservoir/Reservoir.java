@@ -21,6 +21,7 @@ import org.slf4j.LoggerFactory;
 import java.io.File;
 import java.io.IOException;
 import java.lang.management.ManagementFactory;
+import java.lang.management.MemoryMXBean;
 import java.lang.management.RuntimeMXBean;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
@@ -577,7 +578,16 @@ public final class Reservoir {
         List<ByteBufferInfo> byteBufferInfoList;
 
         /** the default usage rate */
-        static final int DEFAULT_USAGE_PERCENT = 90;
+        static final int DEFAULT_USAGE_PERCENT = 80;
+
+        /** the default usage for heap byte buffer */
+        static final long DEFAULT_USAGE_HEAP;
+
+        static {
+            MemoryMXBean mxBean = ManagementFactory.getMemoryMXBean();
+            long max = mxBean.getHeapMemoryUsage().getMax() ;
+            DEFAULT_USAGE_HEAP = (max >= 0) ? max /= 4 : DEFAULT_DIRECT_MEMORY_SIZE;
+        }
 
         private ByteBufferStorageAccessorBuilder() {
         }
@@ -612,7 +622,8 @@ public final class Reservoir {
                 return accessor;
             }
 
-            BulkInfo bulkInfo = new BulkInfo(getMaxDirectMemorySize() / 100 * usagePercent, blockSize, partitionsHint);
+            long usage = direct ? getMaxDirectMemorySize() / 100 * usagePercent : DEFAULT_USAGE_HEAP;
+            BulkInfo bulkInfo = new BulkInfo(usage, blockSize, partitionsHint);
             ByteBufferStorageAccessor<K, V> accessor = new ByteBufferStorageAccessor<K, V>();
             accessor.prepare(name, direct, coder, bulkInfo, rejectedAllocationHandler);
             return accessor;

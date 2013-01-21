@@ -145,6 +145,7 @@ public class ByteBufferStorageAccessor<K, V> extends AbstractBlockedByteStorageA
         }
         for (Map.Entry<Integer, ByteBufferInfo> entry : infoMap.entrySet()) {
             ByteBufferInfo byteBufferInfo = entry.getValue();
+            byteBufferInfo.capacity = (byteBufferInfo.capacity / blockSize) * blockSize;
             int maxPartitionSize = maxPartitionSize(blockSize, byteBufferInfo.direct);
             if (byteBufferInfo.capacity > maxPartitionSize(blockSize, byteBufferInfo.direct)) {
                 throw new IllegalArgumentException(

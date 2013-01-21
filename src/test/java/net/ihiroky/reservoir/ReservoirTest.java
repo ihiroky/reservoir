@@ -114,21 +114,23 @@ public class ReservoirTest {
     public void testByteBufferCacheAccessorBuilder() {
         final int usagePercent = 10;
         final int blockSize = 256;
-        final int partitionsHint = 3;
+        final int partitions = 3;
         final boolean direct = true;
         final Class<?> coderClass = ByteArrayCoder.class;
         final RejectedAllocationHandler rah = RejectedAllocationPolicy.WAIT_FOR_FREE_BLOCK;
 
         StorageAccessor<Object, byte[]> ca = Reservoir.newByteBufferCacheAccessorBuilder()
-                .direct(direct).usagePercent(usagePercent).blockSize(blockSize).partitionsHint(partitionsHint)
+                .direct(direct).usagePercent(usagePercent).blockSize(blockSize).partitionsHint(partitions)
                 .coderClass(coderClass).rejectedAllocationHandler(rah)
                 .build(ReservoirTest.class.getName() + "#testByteBufferCacheAssessorBuilder");
         disposeStorageAccessorList.add(ca);
 
         ByteBufferStorageAccessor<Object, byte[]> bbca = (ByteBufferStorageAccessor<Object, byte[]>) ca;
 
-        assertThat(bbca.getWholeBlocks(), is(DEFAULT_MAX_DIRECT_MEMORY_SIZE / 256L / usagePercent));
-        assertThat(bbca.getPartitions(), is(partitionsHint));
+        // unstable (environment dependent)
+        // assertThat(bbca.getWholeBlocks(), is(DEFAULT_MAX_DIRECT_MEMORY_SIZE / 256L / usagePercent));
+
+        assertThat(bbca.getPartitions(), is(partitions));
         assertThat(bbca.getBlockSize(), is(blockSize));
         assertThat(bbca.getEncoderClassName(), is(ByteArrayCoder.class.getName() + "$ByteArrayEncoder"));
         assertThat(bbca.getDecoderClassName(), is(ByteArrayCoder.class.getName() + "$ByteArrayDecoder"));
@@ -156,7 +158,8 @@ public class ReservoirTest {
         disposeStorageAccessorList.add(ca);
 
         ByteBufferStorageAccessor<Object, byte[]> bbca = (ByteBufferStorageAccessor<Object, byte[]>) ca;
-        assertThat(bbca.getWholeBlocks(), is(DEFAULT_MAX_DIRECT_MEMORY_SIZE / 512L / 10 * 9 + 1)); // 1 : fraction
+        // unstable (enviroment dependent)
+        //assertThat(bbca.getWholeBlocks(), is(DEFAULT_MAX_DIRECT_MEMORY_SIZE / 512L / 10 * 9 + 1)); // 1 : fraction
         assertThat(bbca.getPartitions(), is(1));
         assertThat(bbca.getBlockSize(), is(512));
         assertThat(bbca.getEncoderClassName(), is(SerializableCoder.class.getName() + "$SerializableEncoder"));
