@@ -202,7 +202,7 @@ public final class Reservoir {
      * Creates a builder to create {@link net.ihiroky.reservoir.storage.ByteBufferStorageAccessor}.
      * @return the byte buffer storage accessor builder
      */
-    public static ByteBufferStorageAccessorBuilder newByteBufferCacheAccessorBuilder() {
+    public static ByteBufferStorageAccessorBuilder newByteBufferStorageAccessorBuilder() {
         return new ByteBufferStorageAccessorBuilder();
     }
 
@@ -210,7 +210,7 @@ public final class Reservoir {
      * Creates a builder to create {@link net.ihiroky.reservoir.storage.FileStorageAccessor}.
      * @return the file storage accessor builder
      */
-    public static FileStorageAccessorBuilder newFileCacheAccessorBuilder() {
+    public static FileStorageAccessorBuilder newFileStorageAccessorBuilder() {
         return new FileStorageAccessorBuilder();
     }
 
@@ -218,7 +218,7 @@ public final class Reservoir {
      * Creates a builder to create {@link net.ihiroky.reservoir.storage.MemoryMappedFileStorageAccessor}.
      * @return the memory mapped file storage accessor builder
      */
-    public static MemoryMappedFileStorageAccessorBuilder newMemoryMappedFileCacheAccessorBuilder() {
+    public static MemoryMappedFileStorageAccessorBuilder newMemoryMappedStorageCacheAccessorBuilder() {
         return new MemoryMappedFileStorageAccessorBuilder();
     }
 
@@ -234,7 +234,7 @@ public final class Reservoir {
      *
      * @param size       bytes to allocate as off heap cache (direct byte buffer)
      * @param blockSize  a unit bytes to allocate
-     * @param partitions the number of ByteBuffer instance. This is a hint
+     * @param partitions the number of ByteBuffer instance
      * @param coder      an instance of {@code Coder}
      * @param <K>        the type of the keys
      * @param <V>        the type of the mapped values
@@ -259,7 +259,7 @@ public final class Reservoir {
      * @param name       a name of the cache to create
      * @param size       bytes to allocate as off heap cache (direct byte buffer)
      * @param blockSize  a unit bytes to allocate
-     * @param partitions the number of ByteBuffer instance. This is a hint
+     * @param partitions the number of ByteBuffer instance
      * @param coder      an instance of {@code Coder}
      * @param <K>        the type of the keys
      * @param <V>        the type of mapped values
@@ -454,8 +454,8 @@ public final class Reservoir {
         /** a unit size managed by a storage manager */
         int blockSize;
 
-        /** the hint number of storage used by a storage manager */
-        int partitionsHint;
+        /** the number of storage used by a storage manager */
+        int partitions;
 
         /** a handler to control that a storage gets full */
         RejectedAllocationHandler rejectedAllocationHandler;
@@ -469,8 +469,8 @@ public final class Reservoir {
         /** the default {@code blockSize} */
         static final int DEFAULT_BLOCK_SIZE = 512;
 
-        /** the default {@code partitionsHint} */
-        static final int DEFAULT_PARTITIONS = 1;
+        /** the default {@code partitions} */
+        static final int DEFAULT_PARTITIONS = 0;
 
         private StorageAccessorBuilder() {
             reset();
@@ -482,7 +482,7 @@ public final class Reservoir {
          */
         public void reset() {
             blockSize = DEFAULT_BLOCK_SIZE;
-            partitionsHint = DEFAULT_PARTITIONS;
+            partitions = DEFAULT_PARTITIONS;
             rejectedAllocationHandler = RejectedAllocationPolicy.ABORT;
             coderClass = SerializableCoder.class;
         }
@@ -510,15 +510,13 @@ public final class Reservoir {
         }
 
         /**
-         * Sets the {@code partitionsHint}.
-         * @param partitions partitionsHint to be set
+         * Sets the {@code partitions}.
+         * The minimum partitions is created if {@code partitions} is zero or negative.
+         * @param partitions partitions to be set
          * @return this instance
          */
-        public T partitionsHint(int partitions) {
-            if (partitions < 1) {
-                throw new IllegalArgumentException("[partitionsHint] partitions");
-            }
-            this.partitionsHint = partitions;
+        public T partitions(int partitions) {
+            this.partitions = partitions;
             return t();
         }
 
@@ -623,7 +621,7 @@ public final class Reservoir {
             }
 
             long usage = direct ? getMaxDirectMemorySize() / 100 * usagePercent : DEFAULT_USAGE_HEAP;
-            BulkInfo bulkInfo = new BulkInfo(usage, blockSize, partitionsHint);
+            BulkInfo bulkInfo = new BulkInfo(usage, blockSize, partitions);
             ByteBufferStorageAccessor<K, V> accessor = new ByteBufferStorageAccessor<K, V>();
             accessor.prepare(name, direct, coder, bulkInfo, rejectedAllocationHandler);
             return accessor;
@@ -721,7 +719,7 @@ public final class Reservoir {
                     return accessor;
                 }
 
-                BulkInfo bulkInfo = new BulkInfo(totalSize, blockSize, partitionsHint);
+                BulkInfo bulkInfo = new BulkInfo(totalSize, blockSize, partitions);
                 FileStorageAccessor<K, V> accessor = createInstance();
                 accessor.prepare(name, coder, directory, mode, bulkInfo, rejectedAllocationHandler);
                 return accessor;
@@ -1130,5 +1128,31 @@ public final class Reservoir {
             logger.debug("[build] properties : {}", props);
             return new BasicBlockingQueue<E>(name, storageAccessor, capacity);
         }
+    }
+
+    // execute with parameter -XX:MaxDirectMemorySize=2560m
+    public static void main(String[] args) {
+        testByteBufferStorageAccessorBigDirect();
+        testMaxDirectBufferCapacity();
+    }
+
+    private static void testByteBufferStorageAccessorBigDirect() {
+        StorageAccessor<Object, byte[]> ca = Reservoir.newByteBufferStorageAccessorBuilder()
+                .direct(true).usagePercent(100)
+                .build(Reservoir.class.getName() + "#testByteBufferCacheAssessorBuilderBigDirect");
+        try {
+            ByteBufferStorageAccessor<Object, byte[]> bbca = (ByteBufferStorageAccessor<Object, byte[]>) ca;
+            System.out.println("partitions: " + bbca.getPartitions());
+            System.out.println("blockSize: " + bbca.getBlockSize());
+            System.out.println("size: " + (bbca.getBlockSize() * bbca.getWholeBlocks()));
+        } finally {
+            ca.dispose();
+        }
+    }
+
+    private static void testMaxDirectBufferCapacity() {
+        System.out.println("MaxDirectMemorySize: " + Reservoir.getMaxDirectMemorySize());
+        System.out.println("DirectBufferCapacity: " + Reservoir.getMaxDirectBufferCapacity());
+        System.out.println("Integer.MAX_VALUE   : " + Integer.MAX_VALUE);
     }
 }
